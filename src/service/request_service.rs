@@ -1,10 +1,10 @@
 use crate::config::database::{Database, DatabaseTrait};
-use crate::dto::request_dto::{UserReadDto, UserRegisterDto};
-use crate::entity::request::User;
+use crate::dto::request_dto::{RequestReadDto, RequestRegisterDto};
+use crate::entity::request::Request;
 use crate::error::api_error::ApiError;
 use crate::error::db_error::DbError;
-use crate::error::user_error::UserError;
-use crate::repository::request_repository::{UserRepository, UserRepositoryTrait};
+use crate::error::request_error::RequestError;
+use crate::repository::request_repository::{RequestRepository, RequestRepositoryTrait};
 use sqlx::Error as SqlxError;
 use std::sync::Arc;
 
@@ -22,54 +22,48 @@ impl RequestService {
         }
     }
 
-    pub async fn create_request(&self, payload: UserRegisterDto) -> Result<UserReadDto, ApiError> {
-        return match self.user_repo.find_by_email(payload.email.to_owned()).await {
-            Some(_) => Err(UserError::UserAlreadyExists)?,
-            None => {
-                let user = self.add_user(payload).await;
+    pub async fn create_request(
+        &self,
+        payload: RequestRegisterDto,
+    ) -> Result<RequestReadDto, ApiError> {
+        let request = self.add_request(payload).await;
 
-                return match user {
-                    Ok(user) => Ok(UserReadDto::from(user)),
-                    Err(e) => match e {
-                        SqlxError::Database(e) => match e.code() {
-                            Some(code) => {
-                                if code == "23000" {
-                                    Err(DbError::UniqueConstraintViolation(e.to_string()))?
-                                } else {
-                                    Err(DbError::SomethingWentWrong(e.to_string()))?
-                                }
-                            }
-                            _ => Err(DbError::SomethingWentWrong(e.to_string()))?,
-                        },
-                        _ => Err(DbError::SomethingWentWrong(e.to_string()))?,
-                    },
-                };
-            }
+        return match request {
+            Ok(request) => Ok(RequestReadDto::from(request)),
+            Err(e) => match e {
+                SqlxError::Database(e) => match e.code() {
+                    Some(code) => {
+                        if code == "23000" {
+                            Err(DbError::UniqueConstraintViolation(e.to_string()))?
+                        } else {
+                            Err(DbError::SomethingWentWrong(e.to_string()))?
+                        }
+                    }
+                    _ => Err(DbError::SomethingWentWrong(e.to_string()))?,
+                },
+                _ => Err(DbError::SomethingWentWrong(e.to_string()))?,
+            },
         };
     }
 
-    async fn add_user(&self, payload: UserRegisterDto) -> Result<User, SqlxError> {
+    async fn add_request(&self, payload: RequestRegisterDto) -> Result<Request, SqlxError> {
         let insert = sqlx::query_as!(
-            User,
+            Request,
             r#"
-        INSERT INTO user (first_name, last_name, user_name, email, password, is_active)
-        VALUES (?, ?, ?, ?, ?, ?)
-        "#,
-            payload.first_name,
-            payload.last_name,
-            payload.user_name,
-            payload.email,
-            bcrypt::hash(payload.password, 4).unwrap(),
-            1
+                INSERT INTO requests (model_id, from_address, prompt, request_data, fee_amount, request_type)
+                VALUES ($1, $2, $3, $4, $5, $6)
+            "#,
+            payload.model_id,
+            payload.from_address,
+            payload.prompt,
+            payload.request_data,
+            payload.fee_amount,
+            payload.request_type as RequestType
         )
         .execute(self.db_conn.get_pool())
         .await?;
 
-        let user = self.user_repo.find(insert.last_insert_id()).await?;
-        return Ok(user);
-    }
-
-    pub fn verify_password(&self, user: &User, password: &str) -> bool {
-        return bcrypt::verify(password, &user.password).unwrap_or(false);
+        let request = self.request_repo.find(insert.last_insert_id()).await?;
+        return Ok(request);
     }
 }

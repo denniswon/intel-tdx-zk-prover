@@ -1,8 +1,8 @@
 use crate::handler::register_handler;
-use crate::state::request_state::UserState;
-use axum::{routing::post, Router};
+use crate::state::model_state::ModelState;
+use axum::{Router, routing::post};
 
-pub fn routes() -> Router<UserState> {
+pub fn model() -> Router<ModelState> {
     let router = Router::new().route("/register", post(register_handler::register));
     return router;
 }

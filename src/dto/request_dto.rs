@@ -1,8 +1,8 @@
-use crate::entity::request::Request;
+use crate::entity::request::{Request, RequestStatus, RequestType};
 use chrono::{DateTime, Utc};
+use ethereum_types::{Address, U256};
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError};
-use ethereum_types::{U256, Address};
 
 #[derive(Clone, Serialize, Deserialize, Validate)]
 pub struct RequestDto {
@@ -12,7 +12,10 @@ pub struct RequestDto {
     #[validate(length(min = 1, message = "Prompt cannot be empty"))]
     pub prompt: String,
     pub request_data: Option<Vec<u8>>,
-    #[validate(custom(function = "validate_fee_amount", message = "fee_amount must be greater than or equal to 0"))]
+    #[validate(custom(
+        function = "validate_fee_amount",
+        message = "fee_amount must be greater than or equal to 0"
+    ))]
     pub fee_amount: U256,
     pub request_status: RequestStatus,
     pub created_at: DateTime<Utc>,
@@ -20,7 +23,9 @@ pub struct RequestDto {
 
 fn validate_fee_amount(value: &U256) -> Result<(), ValidationError> {
     if value < &U256::from(0) {
-        return Err(ValidationError::new("fee_amount must be greater than or equal to 0"));
+        return Err(ValidationError::new(
+            "fee_amount must be greater than or equal to 0",
+        ));
     }
     Ok(())
 }
@@ -32,8 +37,12 @@ pub struct RequestRegisterDto {
     #[validate(length(min = 1, message = "Prompt cannot be empty"))]
     pub prompt: String,
     pub request_data: Option<Vec<u8>>,
-    #[validate(custom(function = "validate_fee_amount", message = "fee_amount must be greater than or equal to 0"))]
+    #[validate(custom(
+        function = "validate_fee_amount",
+        message = "fee_amount must be greater than or equal to 0"
+    ))]
     pub fee_amount: U256,
+    pub request_type: RequestType,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -46,6 +55,7 @@ pub struct RequestReadDto {
     pub fee_amount: U256,
     pub created_at: DateTime<Utc>,
     pub request_status: RequestStatus,
+    pub request_type: RequestType,
 }
 
 impl RequestReadDto {
@@ -58,6 +68,7 @@ impl RequestReadDto {
             request_data: request.request_data,
             fee_amount: request.fee_amount,
             request_status: request.request_status,
+            request_type: request.request_type,
             created_at: request.created_at,
         }
     }
@@ -74,6 +85,7 @@ impl std::fmt::Debug for RequestDto {
             .field("fee_amount", &self.fee_amount)
             .field("request_status", &self.request_status)
             .field("created_at", &self.created_at)
+            .field("request_type", &self.request_type)
             .finish()
     }
 }
@@ -86,6 +98,7 @@ impl std::fmt::Debug for RequestRegisterDto {
             .field("prompt", &self.prompt)
             .field("request_data", &self.request_data)
             .field("fee_amount", &self.fee_amount)
+            .field("request_type", &self.request_type)
             .finish()
     }
 }
