@@ -1,5 +1,4 @@
 use crate::response::api_response::ApiErrorResponse;
-use async_trait::async_trait;
 use axum::Json;
 use axum::extract::{FromRequest, Request, rejection::JsonRejection};
 use axum::response::{IntoResponse, Response};
@@ -18,7 +17,7 @@ pub enum ServerError {
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ValidatedRequest<T>(pub T);
 
-#[async_trait]
+// #[async_trait]
 impl<T, S> FromRequest<S> for ValidatedRequest<T>
 where
     T: DeserializeOwned + Validate,
