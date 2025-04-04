@@ -32,7 +32,7 @@ fn validate_fee_amount(value: &U256) -> Result<(), ValidationError> {
 
 #[derive(Clone, Serialize, Deserialize, Validate)]
 pub struct RequestRegisterDto {
-    pub model_id: i32,
+    pub agent_id: i32,
     pub from_address: Address,
     #[validate(length(min = 1, message = "Prompt cannot be empty"))]
     pub prompt: String,
@@ -42,7 +42,6 @@ pub struct RequestRegisterDto {
         message = "fee_amount must be greater than or equal to 0"
     ))]
     pub fee_amount: U256,
-    pub request_type: RequestType,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -55,7 +54,6 @@ pub struct RequestReadDto {
     pub fee_amount: U256,
     pub created_at: DateTime<Utc>,
     pub request_status: RequestStatus,
-    pub request_type: RequestType,
 }
 
 impl RequestReadDto {
@@ -68,7 +66,6 @@ impl RequestReadDto {
             request_data: request.request_data,
             fee_amount: request.fee_amount,
             request_status: request.request_status,
-            request_type: request.request_type,
             created_at: request.created_at,
         }
     }
@@ -85,7 +82,6 @@ impl std::fmt::Debug for RequestDto {
             .field("fee_amount", &self.fee_amount)
             .field("request_status", &self.request_status)
             .field("created_at", &self.created_at)
-            .field("request_type", &self.request_type)
             .finish()
     }
 }
@@ -98,7 +94,7 @@ impl std::fmt::Debug for RequestRegisterDto {
             .field("prompt", &self.prompt)
             .field("request_data", &self.request_data)
             .field("fee_amount", &self.fee_amount)
-            .field("request_type", &self.request_type)
+            .field("request_status", &self.request_status)
             .finish()
     }
 }

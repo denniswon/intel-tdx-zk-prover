@@ -1,2 +1,3 @@
 pub mod request_dto;
-pub mod model_dto;
+pub mod agent_dto;
+pub mod attestation_dto;

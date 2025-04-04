@@ -1,7 +1,7 @@
-use super::auth;
+use super::request;
 use crate::config::database::Database;
 use crate::middleware::auth as auth_middleware;
-use crate::routes::{profile, register};
+use crate::routes::{attestation, register};
 use crate::state::auth_state::AuthState;
 use crate::state::request_state::UserState;
 use crate::state::token_state::TokenState;
@@ -13,13 +13,14 @@ use tower_http::trace::TraceLayer;
 
 pub fn routes(db_conn: Arc<Database>) -> IntoMakeService<Router> {
     let merged_router = {
-        let model_state = ModelState::new(&db_conn);
+        let agent_state = AgentState::new(&db_conn);
+        let attestation_state = AttestationState::new(&db_conn);
         let request_state = RequestState::new(&db_conn);
 
-        auth::routes()
-            .with_state(model_state)
-            .merge(model::routes().with_state(model_state))
-            .merge(order::routes().with_state(request_state))
+        request::routes()
+            .with_state(request_state)
+            .merge(attestation::routes().with_state(attestation_state))
+            .merge(agent::routes().with_state(agent_state))
             .merge(Router::new().route("/health", get(|| async { "Healthy..." })))
     };
 

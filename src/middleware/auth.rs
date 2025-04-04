@@ -25,22 +25,23 @@ pub async fn auth<B>(
 
     let header: Authorization<Bearer> = Authorization::decode(&mut headers).map_err(|_| TokenError::MissingToken)?;
     let token = header.token();
-     match state.token_service.retrieve_token_claims(token) {
-            Ok(token_data) => {
-                let user = state.user_repo.find_by_email(token_data.claims.email).await;
-                match user {
-                    Some(user) => {
-                        req.extensions_mut().insert(user);
-                        Ok(next.run(req).await)
-                    }
-                    None => return Err(UserError::UserNotFound)?,
-                }
-            }
-            Err(err) => {
-                return match err.kind() {
-                    ErrorKind::ExpiredSignature => Err(TokenError::TokenExpired)?,
-                    _ => Err(TokenError::InvalidToken(token.parse().unwrap_or_default()))?,
-                };
-            }
-        }
+    Ok(next.run(req).await)
+    // match state.token_service.retrieve_token_claims(token) {
+    //     Ok(token_data) => {
+    //         let user = state.user_repo.find_by_email(token_data.claims.email).await;
+    //         match user {
+    //             Some(user) => {
+    //                 req.extensions_mut().insert(user);
+    //                 Ok(next.run(req).await)
+    //             }
+    //             None => return Err(UserError::UserNotFound)?,
+    //         }
+    //     }
+    //     Err(err) => {
+    //         return match err.kind() {
+    //             ErrorKind::ExpiredSignature => Err(TokenError::TokenExpired)?,
+    //             _ => Err(TokenError::InvalidToken(token.parse().unwrap_or_default()))?,
+    //         };
+    //     }
+    // }
 }

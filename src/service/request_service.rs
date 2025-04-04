@@ -50,15 +50,14 @@ impl RequestService {
         let insert = sqlx::query_as!(
             Request,
             r#"
-                INSERT INTO requests (model_id, from_address, prompt, request_data, fee_amount, request_type)
-                VALUES ($1, $2, $3, $4, $5, $6)
+                INSERT INTO requests (agent_id, from_address, prompt, request_data, fee_amount)
+                VALUES ($1, $2, $3, $4, $5)
             "#,
-            payload.model_id,
+            payload.agent_id,
             payload.from_address,
             payload.prompt,
             payload.request_data,
-            payload.fee_amount,
-            payload.request_type as RequestType
+            payload.fee_amount
         )
         .execute(self.db_conn.get_pool())
         .await?;

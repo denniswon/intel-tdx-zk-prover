@@ -1,2 +1,3 @@
 pub mod request_repository;
-pub mod model_repository;
+pub mod agent_repository;
+pub mod attestation_repository;

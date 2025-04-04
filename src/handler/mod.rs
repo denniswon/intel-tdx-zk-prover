@@ -1,3 +1,3 @@
+pub mod attestation_handler;
+pub mod agent_handler;
 pub mod request_handler;
-pub mod model_handler;
-pub mod register_handler;

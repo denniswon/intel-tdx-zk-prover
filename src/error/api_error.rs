@@ -1,4 +1,4 @@
-use crate::error::{db_error::DbError, model_error::ModelError, request_error::RequestError };
+use crate::error::{db_error::DbError, agent_error::ModelError, request_error::RequestError };
 use axum::response::{IntoResponse, Response};
 use thiserror::Error;
 
