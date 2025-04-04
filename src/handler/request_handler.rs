@@ -1,4 +1,5 @@
 use crate::dto::request_dto::{RequestReadDto, RequestRegisterDto};
+use crate::repository::request_repository::RequestRepositoryTrait;
 use crate::state::request_state::RequestState;
 use axum::{Json, extract::{Extension, Path, State}};
 use crate::response::api_response::ApiSuccessResponse;
@@ -19,7 +20,7 @@ pub async fn query(
     let request: Result<Request, DbError> = state.request_repo.find(id).await;
     return match request {
         Ok(request) => Ok(Json(RequestReadDto::from(request))),
-        Err(e) => Err(Json(e.into_response()))
+        Err(e) => Err(ApiError::DbError(e))
     };
 }
 

@@ -68,10 +68,21 @@ impl AgentRepositoryTrait for AgentRepository {
     }
 
     async fn find(&self, id: u64) -> Result<Agent, DbError> {
-        let agent = sqlx::query_as::<_, Agent>("SELECT * FROM agents WHERE id = ?")
-            .bind(id)
-            .fetch_one(self.db_conn.get_pool())
-            .await;
+        let agent = sqlx::query_as!(
+            Agent,
+            r#"SELECT
+            id,
+            agent_name,
+            agent_type,
+            agent_uri,
+            agent_description,
+            agent_owner,
+            agent_status as "agent_status: _",
+            created_at,
+            updated_at
+            FROM agents WHERE id = $1"#,
+            id as i32
+        ).fetch_one(self.db_conn.get_pool()).await;
         match agent {
             Ok(agent) => Ok(agent),
             Err(e) => Err(DbError::SomethingWentWrong(e.to_string())),

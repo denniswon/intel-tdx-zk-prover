@@ -1,11 +1,11 @@
-use crate::entity::request::{Request, RequestStatus};
+use crate::entity::{evm::{EvmAddress, WeiAmount}, request::{Request, RequestStatus}};
 use chrono::{DateTime, Utc};
-use ethereum_types::{Address, U256};
+use ethereum_types::U256;
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationError};
 
-fn validate_fee_amount(value: &U256) -> Result<(), ValidationError> {
-    if value < &U256::from(0) {
+fn validate_fee_amount(value: &WeiAmount) -> Result<(), ValidationError> {
+    if value.0 < U256::from(0) {
         return Err(ValidationError::new(
             "fee_amount must be greater than or equal to 0",
         ));
@@ -16,7 +16,7 @@ fn validate_fee_amount(value: &U256) -> Result<(), ValidationError> {
 #[derive(Clone, Serialize, Deserialize, Validate)]
 pub struct RequestRegisterDto {
     pub agent_id: i32,
-    pub from_address: Address,
+    pub from_address: EvmAddress,
     #[validate(length(min = 1, message = "Prompt cannot be empty"))]
     pub prompt: String,
     pub request_data: Option<Vec<u8>>,
@@ -24,17 +24,17 @@ pub struct RequestRegisterDto {
         function = "validate_fee_amount",
         message = "fee_amount must be greater than or equal to 0"
     ))]
-    pub fee_amount: U256,
+    pub fee_amount: WeiAmount,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct RequestReadDto {
     pub id: i32,
     pub agent_id: i32,
-    pub from_address: Address,
+    pub from_address: EvmAddress,
     pub prompt: String,
     pub request_data: Option<Vec<u8>>,
-    pub fee_amount: U256,
+    pub fee_amount: WeiAmount,
     pub created_at: DateTime<Utc>,
     pub request_status: RequestStatus,
 }

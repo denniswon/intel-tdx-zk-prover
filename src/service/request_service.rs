@@ -3,7 +3,6 @@ use crate::dto::request_dto::{RequestReadDto, RequestRegisterDto};
 use crate::entity::request::Request;
 use crate::error::api_error::ApiError;
 use crate::error::db_error::DbError;
-use crate::error::request_error::RequestError;
 use crate::repository::request_repository::{RequestRepository, RequestRepositoryTrait};
 use sqlx::Error as SqlxError;
 use std::sync::Arc;
@@ -57,7 +56,7 @@ impl RequestService {
             payload.from_address,
             payload.prompt,
             payload.request_data,
-            payload.fee_amount
+            BigDecimal::from_ethers_u256(&payload.fee_amount, 18).unwrap()
         )
         .execute(self.db_conn.get_pool())
         .await?;

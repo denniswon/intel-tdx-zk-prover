@@ -8,6 +8,6 @@ CREATE TABLE agents (
     agent_description TEXT DEFAULT NULL,
     agent_owner VARCHAR(42) NOT NULL,
     agent_status agent_status NOT NULL DEFAULT 'Active',
-    created_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NULL
 );

@@ -13,14 +13,14 @@ pub struct Attestation {
 }
 
 
-#[derive(strum_macros::Display, Debug, Clone, Deserialize, Serialize)]
+#[derive(strum_macros::Display, Debug, Clone, sqlx::Type, Deserialize, Serialize)]
 pub enum VerificationStatus {
     Verified,
     Pending,
     Failed,
 }
 
-#[derive(strum_macros::Display, Debug, Clone, Deserialize, Serialize)]
+#[derive(strum_macros::Display, Debug, Clone, sqlx::Type, Deserialize, Serialize)]
 pub enum AttestationType {
     DcapV3,
     DcapV4,

@@ -51,7 +51,7 @@ impl AttestationService {
                 VALUES ($1, $2, $3)
             "#,
             payload.request_id,
-            payload.attestation_type,
+            payload.attestation_type as _,
             payload.attestation_data
         )
         .execute(self.db_conn.get_pool())

@@ -13,7 +13,7 @@ impl AgentState {
     pub fn new(db_conn: &Arc<Database>) -> AgentState {
         Self {
             agent_service: AgentService::new(db_conn),
-            agent_repo: agent_repository::AgentRepository::new(db_conn),
+            agent_repo: agent_repository::AgentRepositoryTrait::new(db_conn),
         }
     }
 }

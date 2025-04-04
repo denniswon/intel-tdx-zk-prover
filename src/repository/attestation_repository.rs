@@ -1,5 +1,5 @@
 use crate::config::database::{Database, DatabaseTrait};
-use crate::entity::request::{Request, RequestStatus};
+use crate::entity::attestation::{Attestation, AttestationType, VerificationStatus};
 use async_trait::async_trait;
 use crate::error::db_error::DbError;
 use std::sync::Arc;
@@ -26,7 +26,7 @@ pub trait AttestationRepositoryTrait {
         request_id: i32,
         verification_status: Option<VerificationStatus>
     ) -> Vec<Attestation>;
-    async fn find(&self, id: u64) -> Result<Attestation, Error>;
+    async fn find(&self, id: u64) -> Result<Attestation, DbError>;
 }
 
 #[async_trait]
@@ -67,7 +67,7 @@ impl AttestationRepositoryTrait for AttestationRepository {
         attestation_type: Option<AttestationType>,
         verification_status: Option<VerificationStatus>
     ) -> Vec<Attestation> {
-        let ra_type = match attestation_type {
+        let attestation_type = match attestation_type {
             Some(_type) => {
                 _type
             }
@@ -114,12 +114,12 @@ impl AttestationRepositoryTrait for AttestationRepository {
                 return attestations;
             }
             None => {
-                let requests = sqlx::query_as::<_, Request>("SELECT * FROM requests WHERE from_address = ?")
-                    .bind(from_address)
+                let attestations = sqlx::query_as::<_, Attestation>("SELECT * FROM attestations WHERE request_id = ?")
+                    .bind(request_id)
                     .fetch_all(self.db_conn.get_pool())
                     .await
                     .unwrap_or(vec![]);
-                return requests;
+                return attestations;
             }
         }
     }
@@ -128,10 +128,8 @@ impl AttestationRepositoryTrait for AttestationRepository {
         let attestation = sqlx::query_as::<_, Attestation>("SELECT * FROM attestations WHERE id = ?")
             .bind(id)
             .fetch_one(self.db_conn.get_pool())
-            .await;
-        match attestation {
-            Ok(attestation) => Ok(attestation),
-            Err(e) => Err(DbError::SomethingWentWrong(e.to_string()))
-        }
+            .await
+            .map_err(|_| DbError::SomethingWentWrong("Failed to fetch attestation".to_string()))?;
+        return Ok(attestation);
     }
 }

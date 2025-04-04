@@ -13,7 +13,7 @@ impl AttestationState {
     pub fn new(db_conn: &Arc<Database>) -> AttestationState {
         Self {
             attestation_service: AttestationService::new(db_conn),
-            attestation_repo: attestation_repository::AttestationRepository::new(db_conn),
+            attestation_repo: attestation_repository::AttestationRepositoryTrait::new(db_conn),
         }
     }
 }

@@ -54,7 +54,7 @@ impl AgentService {
             payload.agent_description,
             payload.agent_type,
             payload.agent_uri,
-            payload.agent_status
+            payload.agent_status.to_string()
         )
         .execute(self.db_conn.get_pool())
         .await?;
