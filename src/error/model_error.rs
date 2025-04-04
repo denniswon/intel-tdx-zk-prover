@@ -6,21 +6,21 @@ use axum::{
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum RequestError {
-    #[error("Request not found")]
-    RequestNotFound,
-    #[error("Request invalid")]
-    RequestInvalid,
+pub enum ModelError {
+    #[error("Model not found")]
+    ModelNotFound,
+    #[error("Model invalid")]
+    ModelInvalid,
     #[error("Request unauthorized")]
     RequestUnauthorized,
 }
 
-impl IntoResponse for RequestError {
+impl IntoResponse for ModelError {
     fn into_response(self) -> Response {
         let status_code = match self {
-            RequestError::RequestNotFound => StatusCode::NOT_FOUND,
-            RequestError::RequestInvalid => StatusCode::BAD_REQUEST,
-            RequestError::RequestUnauthorized => StatusCode::UNAUTHORIZED,
+            ModelError::ModelNotFound => StatusCode::NOT_FOUND,
+            ModelError::ModelInvalid => StatusCode::BAD_REQUEST,
+            ModelError::RequestUnauthorized => StatusCode::UNAUTHORIZED,
         };
 
         ApiErrorResponse::send(status_code.as_u16(), Some(self.to_string()))

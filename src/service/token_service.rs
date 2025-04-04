@@ -1,6 +1,6 @@
 use crate::config::parameter;
 use crate::dto::token_dto::{TokenClaimsDto, TokenReadDto};
-use crate::entity::user::User;
+use crate::entity::request::User;
 use crate::error::token_error::TokenError;
 use chrono;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};

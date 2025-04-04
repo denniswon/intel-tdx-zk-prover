@@ -1,5 +1,5 @@
 use crate::error::{api_error::ApiError, token_error::TokenError, user_error::UserError};
-use crate::repository::user_repository::UserRepositoryTrait;
+use crate::repository::request_repository::UserRepositoryTrait;
 use crate::service::token_service::TokenServiceTrait;
 use crate::state::token_state::TokenState;
 use axum::extract::State;

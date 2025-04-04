@@ -4,7 +4,7 @@ use crate::middleware::auth as auth_middleware;
 use crate::routes::{profile, register};
 use crate::state::auth_state::AuthState;
 use crate::state::token_state::TokenState;
-use crate::state::user_state::UserState;
+use crate::state::request_state::UserState;
 use axum::routing::{get, IntoMakeService};
 use axum::{middleware, Router};
 use std::sync::Arc;

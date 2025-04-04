@@ -1,28 +1,28 @@
 use crate::config::database::{Database, DatabaseTrait};
-use crate::dto::user_dto::{UserReadDto, UserRegisterDto};
-use crate::entity::user::User;
+use crate::dto::request_dto::{UserReadDto, UserRegisterDto};
+use crate::entity::request::User;
 use crate::error::api_error::ApiError;
 use crate::error::db_error::DbError;
 use crate::error::user_error::UserError;
-use crate::repository::user_repository::{UserRepository, UserRepositoryTrait};
+use crate::repository::request_repository::{UserRepository, UserRepositoryTrait};
 use sqlx::Error as SqlxError;
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct UserService {
-    user_repo: UserRepository,
+pub struct RequestService {
+    request_repo: RequestRepository,
     db_conn: Arc<Database>,
 }
 
-impl UserService {
+impl RequestService {
     pub fn new(db_conn: &Arc<Database>) -> Self {
         Self {
-            user_repo: UserRepository::new(db_conn),
+            request_repo: RequestRepository::new(db_conn),
             db_conn: Arc::clone(db_conn),
         }
     }
 
-    pub async fn create_user(&self, payload: UserRegisterDto) -> Result<UserReadDto, ApiError> {
+    pub async fn create_request(&self, payload: UserRegisterDto) -> Result<UserReadDto, ApiError> {
         return match self.user_repo.find_by_email(payload.email.to_owned()).await {
             Some(_) => Err(UserError::UserAlreadyExists)?,
             None => {

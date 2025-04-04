@@ -1,2 +1,2 @@
-pub mod token_dto;
-pub mod user_dto;
+pub mod request_dto;
+pub mod model_dto;
