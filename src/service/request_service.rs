@@ -1,5 +1,6 @@
 use crate::config::database::{Database, DatabaseTrait};
 use crate::dto::request_dto::{RequestReadDto, RequestRegisterDto};
+use crate::entity::evm::WeiAmount;
 use crate::entity::request::Request;
 use crate::error::api_error::ApiError;
 use crate::error::db_error::DbError;
@@ -46,22 +47,30 @@ impl RequestService {
     }
 
     async fn add_request(&self, payload: RequestRegisterDto) -> Result<Request, SqlxError> {
-        let insert = sqlx::query_as!(
+        let request = sqlx::query_as!(
             Request,
             r#"
                 INSERT INTO requests (agent_id, from_address, prompt, request_data, fee_amount)
                 VALUES ($1, $2, $3, $4, $5)
+                RETURNING
+                id,
+                agent_id,
+                from_address,
+                prompt,
+                request_data,
+                fee_amount,
+                request_status as "request_status: _",
+                created_at as "created_at: _"
             "#,
             payload.agent_id,
-            payload.from_address,
+            payload.from_address.to_string(),
             payload.prompt,
             payload.request_data,
-            BigDecimal::from_ethers_u256(&payload.fee_amount, 18).unwrap()
+            payload.fee_amount as WeiAmount
         )
-        .execute(self.db_conn.get_pool())
+        .fetch_one(self.db_conn.get_pool())
         .await?;
 
-        let request = self.request_repo.find(insert.last_insert_id()).await?;
         return Ok(request);
     }
 }

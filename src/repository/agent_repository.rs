@@ -78,8 +78,8 @@ impl AgentRepositoryTrait for AgentRepository {
             agent_description,
             agent_owner,
             agent_status as "agent_status: _",
-            created_at,
-            updated_at
+            created_at as "created_at: _",
+            updated_at as "updated_at: _"
             FROM agents WHERE id = $1"#,
             id as i32,
         )

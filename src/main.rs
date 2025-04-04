@@ -1,7 +1,5 @@
-use std::sync::Arc;
 use axum::{Router, Extension, routing::get};
 use dotenvy::dotenv;
-use routes::root;
 use tracing::{info, Level};
 use tracing_subscriber;
 

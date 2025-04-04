@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::encode::IsNull;
 
 use sqlx::error::BoxDynError;
+use sqlx::types::BigDecimal;
 use sqlx::{Decode, Encode, Type};
 
 use ethereum_types::{H160, U256};
@@ -86,6 +87,18 @@ where
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WeiAmount(pub U256);
+
+impl From<BigDecimal> for WeiAmount {
+    fn from(amount: BigDecimal) -> Self {
+        Self(U256::from_str(&amount.to_string()).unwrap())
+    }
+}
+
+impl From<WeiAmount> for BigDecimal {
+    fn from(wei_amount: WeiAmount) -> Self {
+        BigDecimal::from_str(&wei_amount.0.to_string()).unwrap()
+    }
+}
 
 impl std::fmt::Display for WeiAmount {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

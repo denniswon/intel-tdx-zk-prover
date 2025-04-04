@@ -4,9 +4,10 @@ CREATE TYPE verification_status AS ENUM ('Verified', 'Pending', 'Failed');
 
 CREATE TABLE IF NOT EXISTS attestations (
     id SERIAL PRIMARY KEY,
-    request_id INTEGER REFERENCES requests(id) ON DELETE CASCADE,
+    request_id INTEGER NOT NULL,
     attestation_type attestation_type NOT NULL DEFAULT 'DcapV3',
     verification_status verification_status NOT NULL DEFAULT 'Pending',
     attestation_data BYTEA NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    FOREIGN KEY (request_id) REFERENCES requests(id) ON DELETE CASCADE
 );

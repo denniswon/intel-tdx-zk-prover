@@ -5,7 +5,6 @@ use serde::{Deserialize, Serialize};
 pub struct Attestation {
     pub id: i32,
     pub request_id: i32,
-    pub model_id: i32,
     pub attestation_type: AttestationType,
     pub verification_status: VerificationStatus,
     pub attestation_data: Vec<u8>,
@@ -14,6 +13,7 @@ pub struct Attestation {
 
 
 #[derive(strum_macros::Display, Debug, Clone, sqlx::Type, Deserialize, Serialize)]
+#[sqlx(type_name = "verification_status", rename_all = "snake_case")]
 pub enum VerificationStatus {
     Verified,
     Pending,
@@ -21,6 +21,7 @@ pub enum VerificationStatus {
 }
 
 #[derive(strum_macros::Display, Debug, Clone, sqlx::Type, Deserialize, Serialize)]
+#[sqlx(type_name = "attestation_type", rename_all = "snake_case")]
 pub enum AttestationType {
     DcapV3,
     DcapV4,

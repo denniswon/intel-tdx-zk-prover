@@ -17,6 +17,7 @@ pub struct Request {
 }
 
 #[derive(strum_macros::Display, Debug, Clone, sqlx::Type, Deserialize, Serialize)]
+#[sqlx(type_name = "request_status", rename_all = "snake_case")]
 pub enum RequestStatus {
     Fulfilled,
     Pending,

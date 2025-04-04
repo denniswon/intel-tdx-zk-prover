@@ -18,7 +18,7 @@ pub struct Agent {
 }
 
 #[derive(strum_macros::Display, Debug, Clone, Deserialize, Serialize, sqlx::Type)]
-#[sqlx(type_name = "agent_status")]
+#[sqlx(type_name = "agent_status", rename_all = "snake_case")]
 pub enum AgentStatus {
     Active,
     Inactive,

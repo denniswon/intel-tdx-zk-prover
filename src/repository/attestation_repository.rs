@@ -125,11 +125,21 @@ impl AttestationRepositoryTrait for AttestationRepository {
     }
 
     async fn find(&self, id: u64) -> Result<Attestation, DbError> {
-        let attestation = sqlx::query_as::<_, Attestation>("SELECT * FROM attestations WHERE id = ?")
-            .bind(id)
-            .fetch_one(self.db_conn.get_pool())
-            .await
-            .map_err(|_| DbError::SomethingWentWrong("Failed to fetch attestation".to_string()))?;
+        let attestation = sqlx::query_as!(
+            Attestation,
+            r#"SELECT
+            id,
+            request_id,
+            attestation_type as "attestation_type: _",
+            verification_status as "verification_status: _",
+            attestation_data,
+            created_at as "created_at: _"
+            FROM attestations WHERE id = $1"#,
+            id as i32,
+        )
+        .fetch_one(self.db_conn.get_pool())
+        .await
+        .map_err(|_| DbError::SomethingWentWrong("Failed to fetch attestation".to_string()))?;
         return Ok(attestation);
     }
 }

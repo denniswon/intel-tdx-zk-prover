@@ -26,7 +26,7 @@ where
 {
     type Rejection = ServerError;
 
-    async fn from_request<'a>(req: Request<'a>, state: &'a S) -> Result<Self, Self::Rejection> {
+    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         let Json(value) = Json::<T>::from_request(req, state).await?;
         value.validate()?;
         Ok(ValidatedRequest(value))

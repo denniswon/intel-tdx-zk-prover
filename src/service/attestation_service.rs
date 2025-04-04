@@ -2,8 +2,7 @@ use crate::config::database::{Database, DatabaseTrait};
 use crate::dto::attestation_dto::{AttestationReadDto, AttestationRegisterDto};
 use crate::entity::attestation::Attestation;
 use crate::error::api_error::ApiError;
-use crate::error::db_error::DbError;    
-use crate::error::attestation_error::AttestationError;
+use crate::error::db_error::DbError;
 use crate::repository::attestation_repository::{AttestationRepository, AttestationRepositoryTrait};
 use sqlx::Error as SqlxError;
 use std::sync::Arc;
@@ -44,20 +43,26 @@ impl AttestationService {
     }
 
     async fn add_attestation(&self, payload: AttestationRegisterDto) -> Result<Attestation, SqlxError> {
-        let insert = sqlx::query_as!(
+        let attestation = sqlx::query_as!(
             Attestation,
             r#"
                 INSERT INTO attestations (request_id, attestation_type, attestation_data)
                 VALUES ($1, $2, $3)
+                RETURNING
+                id,
+                request_id,
+                attestation_type as "attestation_type: _",
+                verification_status as "verification_status: _",
+                attestation_data,
+                created_at as "created_at: _"
             "#,
             payload.request_id,
             payload.attestation_type as _,
             payload.attestation_data
         )
-        .execute(self.db_conn.get_pool())
+        .fetch_one(self.db_conn.get_pool())
         .await?;
 
-        let attestation = self.attestation_repo.find(insert.last_insert_id()).await?;
         return Ok(attestation);
     }
 }

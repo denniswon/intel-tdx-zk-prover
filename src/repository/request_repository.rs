@@ -42,16 +42,36 @@ impl RequestRepositoryTrait for RequestRepository {
         match request_status {
             Some(status) => sqlx::query_as!(
                 Request,
-                "SELECT * FROM requests WHERE from_address = $1 AND request_status = $2",
+                r#"SELECT
+                id,
+                agent_id,
                 from_address,
-                status
+                prompt,
+                request_data,
+                fee_amount as "fee_amount: _",
+                request_status as "request_status: _",
+                created_at as "created_at: _"
+                FROM requests
+                WHERE from_address = $1 AND request_status = $2"#,
+                from_address,
+                status as RequestStatus
             )
             .fetch_all(self.db_conn.get_pool())
             .await
             .unwrap_or(vec![]),
             None => sqlx::query_as!(
                 Request,
-                "SELECT * FROM requests WHERE from_address = $1",
+                r#"SELECT
+                id,
+                agent_id,
+                from_address,
+                prompt,
+                request_data,
+                fee_amount as "fee_amount: _",
+                request_status as "request_status: _",
+                created_at as "created_at: _"
+                FROM requests
+                WHERE from_address = $1"#,
                 from_address
             )
             .fetch_all(self.db_conn.get_pool())
@@ -100,9 +120,22 @@ impl RequestRepositoryTrait for RequestRepository {
     }
 
     async fn find(&self, id: u64) -> Result<Request, DbError> {
-        let request = sqlx::query_as!(Request, "SELECT * FROM requests WHERE id = $1", id)
-            .fetch_one(self.db_conn.get_pool())
-            .await;
+        let request = sqlx::query_as!(
+            Request,
+            r#"SELECT
+            id,
+            agent_id,
+            from_address,
+            prompt,
+            request_data,
+            fee_amount as "fee_amount: _",
+            request_status as "request_status: _",
+            created_at as "created_at: _"
+            FROM requests WHERE id = $1"#,
+            id as i32,
+        )
+        .fetch_one(self.db_conn.get_pool())
+        .await;
         match request {
             Ok(request) => Ok(request),
             Err(e) => Err(DbError::SomethingWentWrong(e.to_string())),
