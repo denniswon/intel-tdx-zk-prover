@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Deserialize, Serialize, sqlx::FromRow)]
 pub struct Request {
     pub id: i32,
-    pub model_id: i32,
+    pub agent_id: i32,
     pub from_address: Address,
     pub prompt: String,
     pub request_data: Option<Vec<u8>>,
@@ -14,7 +14,7 @@ pub struct Request {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(strum_macros::Display)]
+#[derive(strum_macros::Display, Debug, Clone, Deserialize, Serialize)]
 pub enum RequestStatus {
     Fulfilled,
     Pending,

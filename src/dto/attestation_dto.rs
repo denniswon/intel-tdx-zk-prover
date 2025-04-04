@@ -1,8 +1,7 @@
-use crate::entity::request::{Request, RequestStatus, RequestType};
+use crate::entity::attestation::{Attestation, AttestationType, VerificationStatus};
 use chrono::{DateTime, Utc};
-use ethereum_types::{Address, U256};
 use serde::{Deserialize, Serialize};
-use validator::{Validate, ValidationError};
+use validator::Validate;
 
 #[derive(Clone, Serialize, Deserialize, Validate)]
 pub struct AttestationDto {
@@ -21,7 +20,7 @@ pub struct AttestationRegisterDto {
     pub attestation_data: Vec<u8>,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct AttestationReadDto {
     pub id: i32,
     pub request_id: i32,
@@ -44,9 +43,9 @@ impl AttestationReadDto {
     }
 }
 
-impl std::fmt::Debug for RequestDto {
+impl std::fmt::Debug for AttestationReadDto {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Attestation")
+        f.debug_struct("AttestationReadDto")
             .field("id", &self.id)
             .field("request_id", &self.request_id)
             .field("attestation_type", &self.attestation_type)
@@ -62,7 +61,6 @@ impl std::fmt::Debug for AttestationRegisterDto {
         f.debug_struct("AttestationRegisterDto")
             .field("request_id", &self.request_id)
             .field("attestation_type", &self.attestation_type)
-            .field("verification_status", &self.verification_status)
             .field("attestation_data", &self.attestation_data)
             .finish()
     }

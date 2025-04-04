@@ -4,7 +4,6 @@ use axum::{Json, extract::{Extension, Path, State}};
 use crate::response::api_response::ApiSuccessResponse;
 use crate::entity::request::Request;
 use crate::error::{api_error::ApiError, api_request_error::ValidatedRequest};
-use crate::service::request_service::RequestService;
 use crate::error::db_error::DbError;
 
 pub async fn get(
@@ -24,7 +23,7 @@ pub async fn query(
     };
 }
 
-pub async fn register_request(
+pub async fn register(
     State(state): State<RequestState>,
     ValidatedRequest(payload): ValidatedRequest<RequestRegisterDto>,
 ) -> Result<Json<RequestReadDto>, ApiError> {

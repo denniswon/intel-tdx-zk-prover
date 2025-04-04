@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use ethereum_types::Address;
 
 #[derive(Clone, Deserialize, Serialize, sqlx::FromRow)]
 pub struct Attestation {
@@ -14,14 +13,14 @@ pub struct Attestation {
 }
 
 
-#[derive(strum_macros::Display)]
+#[derive(strum_macros::Display, Debug, Clone, Deserialize, Serialize)]
 pub enum VerificationStatus {
     Verified,
     Pending,
     Failed,
 }
 
-#[derive(strum_macros::Display)]
+#[derive(strum_macros::Display, Debug, Clone, Deserialize, Serialize)]
 pub enum AttestationType {
     DcapV3,
     DcapV4,

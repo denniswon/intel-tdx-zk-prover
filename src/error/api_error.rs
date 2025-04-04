@@ -1,4 +1,9 @@
-use crate::error::{db_error::DbError, agent_error::ModelError, request_error::RequestError };
+use crate::error::{
+    db_error::DbError,
+    attestation_error::AttestationError,
+    agent_error::AgentError,
+    request_error::RequestError
+};
 use axum::response::{IntoResponse, Response};
 use thiserror::Error;
 
@@ -9,7 +14,9 @@ pub enum ApiError {
     #[error(transparent)]
     RequestError(#[from] RequestError),
     #[error(transparent)]
-    ModelError(#[from] ModelError),
+    AgentError(#[from] AgentError),
+    #[error(transparent)]
+    AttestationError(#[from] AttestationError),
 }
 
 impl IntoResponse for ApiError {
@@ -17,7 +24,8 @@ impl IntoResponse for ApiError {
         match self {
             ApiError::DbError(error) => error.into_response(),
             ApiError::RequestError(error) => error.into_response(),
-            ApiError::ModelError(error) => error.into_response(),
+            ApiError::AgentError(error) => error.into_response(),
+            ApiError::AttestationError(error) => error.into_response(),
         }
     }
 }

@@ -1,4 +1,4 @@
 pub mod request;
-pub mod model;
-pub mod profile;
+pub mod agent;
+pub mod attestation;
 pub mod root;

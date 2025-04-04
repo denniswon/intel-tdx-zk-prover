@@ -1,11 +1,11 @@
-use crate::parameter;
 use async_trait::async_trait;
 use sqlx::{Error, Postgres, Pool};
 
 use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
-use tracing::{info, Level};
+use tracing::info;
 
+#[derive(Clone)]
 pub struct Database {
     pool: Pool<Postgres>,
 }

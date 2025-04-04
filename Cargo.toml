@@ -4,26 +4,25 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-axum = { version = "0.8.1" }
-hyper = { version = "0.14.23", features = ["full"] }
-tokio = { version = "1.44.1", features = ["full"] }
-tower = { version = "0.4.13", features = ["full"] }
-tower-http = { version = "0.4.0", features = ["full"] }
+async-trait = "0.1.88"
+axum = "0.8.3"
+bcrypt = "0.17.0"
+chrono = { version = "0.4.40", features = ["serde"] }
 dotenvy = "0.15.7"
-serde = { version = "1.0.219", features = ["derive"] }
-jsonwebtoken = "8.3.0"
-thiserror = "1.0.40"
-chrono = {version = "0.4.24", features = ["serde"]}
-bcrypt = "0.14.0"
-serde_json = "1.0.95"
-mockall = "0.11.4"
-validator = { version = "0.16.0", features = ["derive"] }
-async-trait = "0.1.68"
-sqlx = { version = "0.8.3", features = ["runtime-tokio", "tls-native-tls", "postgres", "chrono", "bigdecimal"] }
-sqlx-cli = "0.8.3"
-tracing-subscriber = "0.3.19"
-tracing = "0.1.41"
-ethers_primitives = "0.2.2"
 ethereum-types = "0.15.1"
+ethers_primitives = "0.2.2"
+hyper = "1.6.0"
+mockall = "0.13.1"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
+sqlx = { version = "0.8.3", features = ["runtime-tokio", "tls-native-tls", "postgres"] }
+sqlx-cli = "0.8.3"
 strum = "0.27.1"
 strum_macros = "0.27.1"
+thiserror = "2.0.12"
+tokio = { version = "1.44.1", features = ["full"] }
+tower = { version = "0.5.2", features = ["full"] }
+tower-http = { version = "0.6.2", features = ["full"] }
+tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
+validator = { version = "0.20.0", features = ["derive"] }

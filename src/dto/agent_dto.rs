@@ -1,21 +1,8 @@
-use crate::entity::request::Request;
+use crate::entity::agent::{Agent, AgentStatus};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use validator::{Validate, ValidationError};
-use ethereum_types::{U256, Address};
-
-#[derive(Clone, Serialize, Deserialize, Validate)]
-pub struct AgentDto {
-    pub id: i32,
-    pub agent_name: String,
-    pub agent_type: String,
-    pub agent_uri: String,
-    pub agent_description: String,
-    pub agent_owner: Address,
-    pub agent_status: AgentStatus,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
-}
+use validator::Validate;
+use ethereum_types::Address;
 
 #[derive(Clone, Serialize, Deserialize, Validate)]
 pub struct AgentRegisterDto {
@@ -30,7 +17,7 @@ pub struct AgentRegisterDto {
     pub agent_status: AgentStatus,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct AgentReadDto {
     pub id: i32,
     pub agent_name: String,
@@ -59,9 +46,9 @@ impl AgentReadDto {
     }
 }
 
-impl std::fmt::Debug for AgentDto {
+impl std::fmt::Debug for AgentReadDto {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Agent")
+        f.debug_struct("AgentReadDto")
             .field("id", &self.id)
             .field("agent_name", &self.agent_name)
             .field("agent_type", &self.agent_type)

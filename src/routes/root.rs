@@ -1,15 +1,16 @@
-use super::request;
 use crate::config::database::Database;
-use crate::middleware::auth as auth_middleware;
-use crate::routes::{attestation, register};
-use crate::state::auth_state::AuthState;
-use crate::state::request_state::UserState;
-use crate::state::token_state::TokenState;
+use crate::state::agent_state::AgentState;
+use crate::state::attestation_state::AttestationState;
+use crate::state::request_state::RequestState;
+use axum::body::Bytes;
 use axum::routing::{IntoMakeService, get};
-use axum::{Router, middleware};
+use axum::Router;
+use tower_http::LatencyUnit;
 use std::sync::Arc;
-use tower::ServiceBuilder;
-use tower_http::trace::TraceLayer;
+use std::time::Duration;
+use tower_http::trace::{TraceLayer, DefaultMakeSpan, DefaultOnResponse};
+
+use super::{agent, attestation, request};
 
 pub fn routes(db_conn: Arc<Database>) -> IntoMakeService<Router> {
     let merged_router = {
@@ -19,14 +20,21 @@ pub fn routes(db_conn: Arc<Database>) -> IntoMakeService<Router> {
 
         request::routes()
             .with_state(request_state)
-            .merge(attestation::routes().with_state(attestation_state))
             .merge(agent::routes().with_state(agent_state))
+            .merge(attestation::routes().with_state(attestation_state))
             .merge(Router::new().route("/health", get(|| async { "Healthy..." })))
     };
 
     let app_router = Router::new()
         .nest("/api", merged_router)
-        .layer(TraceLayer::new_for_http());
+        .layer(
+            TraceLayer::new_for_http()
+                .on_body_chunk(|chunk: &Bytes, latency: Duration, _: &tracing::Span| {
+                    tracing::trace!(size_bytes = chunk.len(), latency = ?latency, "sending body chunk")
+                })
+                .make_span_with(DefaultMakeSpan::new().include_headers(true))
+                .on_response(DefaultOnResponse::new().include_headers(true).latency_unit(LatencyUnit::Micros)),
+        );
 
     app_router.into_make_service()
 }

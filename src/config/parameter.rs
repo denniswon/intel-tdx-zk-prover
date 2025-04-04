@@ -1,7 +1,7 @@
-use dotenv;
+use dotenvy;
 
 pub fn init() {
-    dotenv::dotenv().ok().expect("Failed to load .env file");
+    dotenvy::dotenv().ok().expect("Failed to load .env file");
 }
 
 pub fn get(parameter: &str) -> String {

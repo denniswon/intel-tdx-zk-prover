@@ -15,7 +15,7 @@ pub struct Agent {
     pub updated_at: Option<DateTime<Utc>>,
 }
 
-#[derive(strum_macros::Display)]
+#[derive(strum_macros::Display, Debug, Clone, Deserialize, Serialize)]
 pub enum AgentStatus {
     Active,
     Inactive,
