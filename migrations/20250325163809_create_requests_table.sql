@@ -1,6 +1,6 @@
 -- Add migration script here
 CREATE TYPE request_status AS ENUM ('Fulfilled', 'Pending', 'Failed');
-CREATE TABLE requests (
+CREATE TABLE IF NOT EXISTS requests (
     id SERIAL PRIMARY KEY,
     agent_id INTEGER REFERENCES agents(id) ON DELETE CASCADE,
     from_address VARCHAR(42) NOT NULL,

@@ -1,4 +1,3 @@
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
@@ -11,7 +10,7 @@ pub struct Agent {
     pub agent_name: String,
     pub agent_type: String,
     pub agent_uri: String,
-    pub agent_description: String,
+    pub agent_description: Option<String>,
     pub agent_owner: EvmAddress,
     pub agent_status: AgentStatus,
     pub created_at: DateTime<Utc>,

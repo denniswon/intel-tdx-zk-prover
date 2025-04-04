@@ -9,7 +9,7 @@ pub struct AttestationDto {
     pub request_id: i32,
     pub attestation_type: AttestationType,
     pub verification_status: VerificationStatus,
-    pub attestation_data: Option<Vec<u8>>,
+    pub attestation_data: Vec<u8>,
     pub created_at: DateTime<Utc>,
 }
 

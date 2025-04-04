@@ -81,8 +81,10 @@ impl AgentRepositoryTrait for AgentRepository {
             created_at,
             updated_at
             FROM agents WHERE id = $1"#,
-            id as i32
-        ).fetch_one(self.db_conn.get_pool()).await;
+            id as i32,
+        )
+        .fetch_one(self.db_conn.get_pool())
+        .await;
         match agent {
             Ok(agent) => Ok(agent),
             Err(e) => Err(DbError::SomethingWentWrong(e.to_string())),

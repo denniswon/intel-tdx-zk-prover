@@ -1,4 +1,7 @@
-use crate::entity::{evm::{EvmAddress, WeiAmount}, request::{Request, RequestStatus}};
+use crate::entity::{
+    evm::{EvmAddress, WeiAmount},
+    request::{Request, RequestStatus},
+};
 use chrono::{DateTime, Utc};
 use ethereum_types::U256;
 use serde::{Deserialize, Serialize};
@@ -19,7 +22,7 @@ pub struct RequestRegisterDto {
     pub from_address: EvmAddress,
     #[validate(length(min = 1, message = "Prompt cannot be empty"))]
     pub prompt: String,
-    pub request_data: Option<Vec<u8>>,
+    pub request_data: Vec<u8>,
     #[validate(custom(
         function = "validate_fee_amount",
         message = "fee_amount must be greater than or equal to 0"

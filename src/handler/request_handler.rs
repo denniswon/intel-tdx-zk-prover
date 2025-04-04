@@ -1,11 +1,14 @@
 use crate::dto::request_dto::{RequestReadDto, RequestRegisterDto};
-use crate::repository::request_repository::RequestRepositoryTrait;
-use crate::state::request_state::RequestState;
-use axum::{Json, extract::{Extension, Path, State}};
-use crate::response::api_response::ApiSuccessResponse;
 use crate::entity::request::Request;
-use crate::error::{api_error::ApiError, api_request_error::ValidatedRequest};
 use crate::error::db_error::DbError;
+use crate::error::{api_error::ApiError, api_request_error::ValidatedRequest};
+use crate::repository::request_repository::RequestRepositoryTrait;
+use crate::response::api_response::ApiSuccessResponse;
+use crate::state::request_state::RequestState;
+use axum::{
+    Json,
+    extract::{Extension, Path, State},
+};
 
 pub async fn get(
     Extension(request): Extension<Request>,
@@ -15,12 +18,12 @@ pub async fn get(
 
 pub async fn query(
     State(state): State<RequestState>,
-    Path(id): Path<i32>
+    Path(id): Path<i32>,
 ) -> Result<Json<RequestReadDto>, ApiError> {
-    let request: Result<Request, DbError> = state.request_repo.find(id).await;
+    let request: Result<Request, DbError> = state.request_repo.find(id.try_into().unwrap()).await;
     return match request {
         Ok(request) => Ok(Json(RequestReadDto::from(request))),
-        Err(e) => Err(ApiError::DbError(e))
+        Err(e) => Err(ApiError::DbError(e)),
     };
 }
 

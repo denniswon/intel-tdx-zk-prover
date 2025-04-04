@@ -1,4 +1,7 @@
-use crate::entity::{agent::{Agent, AgentStatus}, evm::EvmAddress};
+use crate::entity::{
+    agent::{Agent, AgentStatus},
+    evm::EvmAddress,
+};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use validator::Validate;
@@ -22,7 +25,7 @@ pub struct AgentReadDto {
     pub agent_name: String,
     pub agent_type: String,
     pub agent_uri: String,
-    pub agent_description: String,
+    pub agent_description: Option<String>,
     pub agent_owner: EvmAddress,
     pub agent_status: AgentStatus,
     pub created_at: DateTime<Utc>,

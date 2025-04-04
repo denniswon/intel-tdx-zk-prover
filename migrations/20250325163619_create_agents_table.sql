@@ -1,6 +1,6 @@
 -- Add migration script here
 CREATE TYPE agent_status AS ENUM ('Active', 'Inactive');
-CREATE TABLE agents (
+CREATE TABLE IF NOT EXISTS agents (
     id SERIAL PRIMARY KEY,
     agent_name VARCHAR(255) NOT NULL,
     agent_type VARCHAR(255) NOT NULL,
