@@ -5,10 +5,10 @@ use crate::state::request_state::RequestState;
 use axum::body::Bytes;
 use axum::routing::{IntoMakeService, get};
 use axum::Router;
-use tower_http::LatencyUnit;
 use std::sync::Arc;
 use std::time::Duration;
-use tower_http::trace::{TraceLayer, DefaultMakeSpan, DefaultOnResponse};
+use tower_http::LatencyUnit;
+use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 
 use super::{agent, attestation, request};
 
