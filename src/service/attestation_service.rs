@@ -24,7 +24,7 @@ impl AttestationService {
     pub async fn create_attestation(&self, payload: AttestationRegisterDto) -> Result<AttestationReadDto, ApiError> {
         let attestation = self.add_attestation(payload).await;
 
-        return match attestation {
+        match attestation {
             Ok(user) => Ok(AttestationReadDto::from(user)),
             Err(e) => match e {
                 SqlxError::Database(e) => match e.code() {
@@ -39,7 +39,7 @@ impl AttestationService {
                 },
                 _ => Err(DbError::SomethingWentWrong(e.to_string()))?,
             },
-        };
+        }
     }
 
     async fn add_attestation(&self, payload: AttestationRegisterDto) -> Result<Attestation, SqlxError> {
@@ -63,6 +63,6 @@ impl AttestationService {
         .fetch_one(self.db_conn.get_pool())
         .await?;
 
-        return Ok(attestation);
+        Ok(attestation)
     }
 }

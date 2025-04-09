@@ -21,10 +21,10 @@ pub async fn query(
     Path(id): Path<i32>,
 ) -> Result<Json<RequestReadDto>, ApiError> {
     let request: Result<Request, DbError> = state.request_repo.find(id.try_into().unwrap()).await;
-    return match request {
+    match request {
         Ok(request) => Ok(Json(RequestReadDto::from(request))),
         Err(e) => Err(ApiError::DbError(e)),
-    };
+    }
 }
 
 pub async fn register(

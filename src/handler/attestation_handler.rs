@@ -24,10 +24,10 @@ pub async fn query(
 ) -> Result<Json<AttestationReadDto>, ApiError> {
     let attestation: Result<Attestation, DbError> =
         state.attestation_repo.find(id.try_into().unwrap()).await;
-    return match attestation {
+    match attestation {
         Ok(attestation) => Ok(Json(AttestationReadDto::from(attestation))),
         Err(e) => Err(ApiError::DbError(e)),
-    };
+    }
 }
 
 pub async fn register(

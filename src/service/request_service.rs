@@ -28,7 +28,7 @@ impl RequestService {
     ) -> Result<RequestReadDto, ApiError> {
         let request = self.add_request(payload).await;
 
-        return match request {
+        match request {
             Ok(request) => Ok(RequestReadDto::from(request)),
             Err(e) => match e {
                 SqlxError::Database(e) => match e.code() {
@@ -43,7 +43,7 @@ impl RequestService {
                 },
                 _ => Err(DbError::SomethingWentWrong(e.to_string()))?,
             },
-        };
+        }
     }
 
     async fn add_request(&self, payload: RequestRegisterDto) -> Result<Request, SqlxError> {
@@ -71,6 +71,6 @@ impl RequestService {
         .fetch_one(self.db_conn.get_pool())
         .await?;
 
-        return Ok(request);
+        Ok(request)
     }
 }

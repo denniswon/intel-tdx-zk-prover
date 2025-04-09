@@ -6,21 +6,22 @@ use axum::{
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum AttestationError {
     #[error("Attestation not found")]
-    AttestationNotFound,
+    NotFound,
     #[error("Attestation invalid")]
-    AttestationInvalid,
+    Invalid,
     #[error("Attestation unauthorized")]
-    AttestationUnauthorized,
+    Unauthorized,
 }
 
 impl IntoResponse for AttestationError {
     fn into_response(self) -> Response {
         let status_code = match self {
-            AttestationError::AttestationNotFound => StatusCode::NOT_FOUND,
-            AttestationError::AttestationInvalid => StatusCode::BAD_REQUEST,
-            AttestationError::AttestationUnauthorized => StatusCode::UNAUTHORIZED,
+            AttestationError::NotFound => StatusCode::NOT_FOUND,
+            AttestationError::Invalid => StatusCode::BAD_REQUEST,
+            AttestationError::Unauthorized => StatusCode::UNAUTHORIZED,
         };
 
         ApiErrorResponse::send(status_code.as_u16(), Some(self.to_string()))

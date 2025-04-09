@@ -1,7 +1,6 @@
 use axum::{Router, Extension, routing::get};
 use dotenvy::dotenv;
 use tracing::{info, Level};
-use tracing_subscriber;
 
 use crate::config::parameter;
 use crate::config::database::{Database, DatabaseTrait};
@@ -30,7 +29,7 @@ async fn main() {
     parameter::init();
     let connection = Database::init()
         .await
-        .unwrap_or_else(|e| panic!("Database error: {}", e.to_string()));
+        .unwrap_or_else(|e| panic!("Database error: {}", e));
 
     let port = std::env::var("PORT")
         .or_else(|_| Ok::<String, std::env::VarError>("5000".to_string())).unwrap();
@@ -44,7 +43,7 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(&host).await.unwrap();
     axum::serve(listener, app)
         .await
-        .unwrap_or_else(|e| panic!("Server error: {}", e.to_string()));
+        .unwrap_or_else(|e| panic!("Server error: {}", e));
     
     info!("Server is running on {}", host);
 }
