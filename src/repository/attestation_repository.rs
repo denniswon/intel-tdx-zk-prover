@@ -72,7 +72,7 @@ impl AttestationRepositoryTrait for AttestationRepository {
                 _type
             }
             None => {
-                AttestationType::DcapV3
+                AttestationType::DcapV3 
             }
         };
 

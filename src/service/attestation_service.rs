@@ -1,6 +1,6 @@
 use crate::config::database::{Database, DatabaseTrait};
 use crate::dto::attestation_dto::{AttestationReadDto, AttestationRegisterDto};
-use crate::entity::attestation::Attestation;
+use crate::entity::attestation::{Attestation, AttestationType};
 use crate::error::api_error::ApiError;
 use crate::error::db_error::DbError;
 use crate::repository::attestation_repository::{AttestationRepository, AttestationRepositoryTrait};
@@ -47,7 +47,7 @@ impl AttestationService {
             Attestation,
             r#"
                 INSERT INTO attestations (request_id, attestation_type, attestation_data)
-                VALUES ($1, $2, $3)
+                VALUES ($1, $2, decode($3, 'hex'))
                 RETURNING
                 id,
                 request_id,
@@ -57,12 +57,11 @@ impl AttestationService {
                 created_at as "created_at: _"
             "#,
             payload.request_id,
-            payload.attestation_type as _,
-            payload.attestation_data
+            payload.attestation_type as AttestationType,
+            String::from_utf8(payload.attestation_data.to_vec()).unwrap(),
         )
         .fetch_one(self.db_conn.get_pool())
         .await?;
-
         Ok(attestation)
     }
 }

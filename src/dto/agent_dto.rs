@@ -2,7 +2,7 @@ use crate::entity::{
     agent::{Agent, AgentStatus},
     evm::EvmAddress,
 };
-use chrono::{DateTime, Utc};
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -14,9 +14,9 @@ pub struct AgentRegisterDto {
     pub agent_type: String,
     #[validate(length(min = 1, message = "Agent URI cannot be empty"))]
     pub agent_uri: String,
-    pub agent_description: String,
+    pub agent_description: Option<String>,
     pub agent_owner: EvmAddress,
-    pub agent_status: AgentStatus,
+    pub agent_status: Option<AgentStatus>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -28,8 +28,8 @@ pub struct AgentReadDto {
     pub agent_description: Option<String>,
     pub agent_owner: EvmAddress,
     pub agent_status: AgentStatus,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: Option<DateTime<Utc>>,
+    pub created_at: NaiveDateTime,
+    pub updated_at: Option<NaiveDateTime>,
 }
 
 impl AgentReadDto {

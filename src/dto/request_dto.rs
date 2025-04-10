@@ -1,33 +1,16 @@
 use crate::entity::{
-    evm::{EvmAddress, WeiAmount},
+    evm::EvmAddress,
     request::{Request, RequestStatus},
 };
-use chrono::{DateTime, Utc};
-use ethereum_types::U256;
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
-use validator::{Validate, ValidationError};
-
-fn validate_fee_amount(value: &WeiAmount) -> Result<(), ValidationError> {
-    if value.0 < U256::from(0) {
-        return Err(ValidationError::new(
-            "fee_amount must be greater than or equal to 0",
-        ));
-    }
-    Ok(())
-}
+use validator::Validate;
 
 #[derive(Clone, Serialize, Deserialize, Validate)]
 pub struct RequestRegisterDto {
     pub agent_id: i32,
     pub from_address: EvmAddress,
-    #[validate(length(min = 1, message = "Prompt cannot be empty"))]
-    pub prompt: String,
-    pub request_data: Vec<u8>,
-    #[validate(custom(
-        function = "validate_fee_amount",
-        message = "fee_amount must be greater than or equal to 0"
-    ))]
-    pub fee_amount: WeiAmount,
+    pub request_data: Option<Vec<u8>>,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -35,10 +18,8 @@ pub struct RequestReadDto {
     pub id: i32,
     pub agent_id: i32,
     pub from_address: EvmAddress,
-    pub prompt: String,
     pub request_data: Option<Vec<u8>>,
-    pub fee_amount: WeiAmount,
-    pub created_at: DateTime<Utc>,
+    pub created_at: NaiveDateTime,
     pub request_status: RequestStatus,
 }
 
@@ -48,9 +29,7 @@ impl RequestReadDto {
             id: request.id,
             agent_id: request.agent_id,
             from_address: request.from_address,
-            prompt: request.prompt,
             request_data: request.request_data,
-            fee_amount: request.fee_amount,
             request_status: request.request_status,
             created_at: request.created_at,
         }
@@ -63,9 +42,7 @@ impl std::fmt::Debug for RequestReadDto {
             .field("id", &self.id)
             .field("agent_id", &self.agent_id)
             .field("from_address", &self.from_address)
-            .field("prompt", &self.prompt)
             .field("request_data", &self.request_data)
-            .field("fee_amount", &self.fee_amount)
             .field("request_status", &self.request_status)
             .field("created_at", &self.created_at)
             .finish()
@@ -77,9 +54,7 @@ impl std::fmt::Debug for RequestRegisterDto {
         f.debug_struct("RequestRegisterDto")
             .field("agent_id", &self.agent_id)
             .field("from_address", &self.from_address)
-            .field("prompt", &self.prompt)
             .field("request_data", &self.request_data)
-            .field("fee_amount", &self.fee_amount)
             .finish()
     }
 }

@@ -56,10 +56,10 @@ impl AgentService {
             "#,
             payload.agent_owner.to_string(),
             payload.agent_name,
-            payload.agent_description,
+            payload.agent_description.unwrap_or_default(),
             payload.agent_type,
             payload.agent_uri,
-            payload.agent_status as AgentStatus
+            payload.agent_status.unwrap_or(AgentStatus::Active) as AgentStatus
         )
         .fetch_one(self.db_conn.get_pool())
         .await?;
