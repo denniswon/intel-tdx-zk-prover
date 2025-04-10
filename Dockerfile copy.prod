@@ -1,0 +1,36 @@
+FROM rust:1.86 AS planner
+WORKDIR /tdx-prover
+# We only pay the installation cost once,
+# it will be cached from the second build onwards
+# To ensure a reproducible build consider pinning
+# the cargo-chef version with `--version X.X.X`
+RUN cargo install cargo-chef
+COPY . .
+# Compute a lock-like file for our project
+RUN cargo chef prepare  --recipe-path recipe.json
+
+FROM rust:1.49 AS cacher
+WORKDIR /tdx-prover
+RUN cargo install cargo-chef
+COPY --from=planner /tdx-prover/recipe.json recipe.json
+# Build our project dependencies, not our application!
+RUN cargo chef cook --release --recipe-path recipe.json
+
+FROM rust:1.86 AS builder
+WORKDIR /tdx-prover
+# Copy over the cached dependencies
+COPY --from=cacher /tdx-prover/target target
+COPY --from=cacher /usr/local/cargo /usr/local/cargo
+COPY . .
+# Build our application, leveraging the cached deps!
+ENV SQLX_OFFLINE true
+RUN cargo build --release
+
+FROM debian:buster-slim AS runtime
+WORKDIR /tdx-prover
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends openssl \
+    # Clean up
+    && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /tdx-prover/target/release/tdx-prover .
+ENTRYPOINT ["./tdx-prover"]
