@@ -4125,38 +4125,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-axum-api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "axum",
- "bcrypt",
- "bigdecimal",
- "bigdecimal-ethers-ext",
- "chrono",
- "dcap-qvl",
- "dotenvy",
- "ethereum-types 0.15.1",
- "ethers_primitives",
- "hyper 1.6.0",
- "mockall",
- "serde",
- "serde_json",
- "sqlx",
- "sqlx-cli",
- "strum 0.27.1",
- "strum_macros 0.27.1",
- "thiserror 2.0.12",
- "tokio",
- "tower",
- "tower-http",
- "tracing",
- "tracing-subscriber",
- "validator",
-]
-
-[[package]]
 name = "rustc-demangle"
 version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5160,6 +5128,38 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
+
+[[package]]
+name = "tdx-prover"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum",
+ "bcrypt",
+ "bigdecimal",
+ "bigdecimal-ethers-ext",
+ "chrono",
+ "dcap-qvl",
+ "dotenvy",
+ "ethereum-types 0.15.1",
+ "ethers_primitives",
+ "hyper 1.6.0",
+ "mockall",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "sqlx-cli",
+ "strum 0.27.1",
+ "strum_macros 0.27.1",
+ "thiserror 2.0.12",
+ "tokio",
+ "tower",
+ "tower-http",
+ "tracing",
+ "tracing-subscriber",
+ "validator",
+]
 
 [[package]]
 name = "tempfile"
