@@ -1,20 +1,16 @@
 
 
-FROM rust:1.86.0-slim-bullseye AS build
-
-RUN USER=root cargo new --bin tdx-prover
-WORKDIR /tdx-prover
+FROM rust:1.86-slim-bullseye AS build
 
 # install dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     pkg-config \
-    libssl-dev
-RUN apt-get update -y \
-    && apt-get install -y psmisc \
-    && apt-get install -y --no-install-recommends openssl \
-    # Clean up
-    && apt-get autoremove -y && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+    libssl-dev \
+    libpq-dev
+
+RUN USER=root cargo new --bin tdx-prover
+WORKDIR /tdx-prover
 
 # Copy Cargo files
 COPY ./Cargo.lock ./Cargo.lock
@@ -24,25 +20,26 @@ COPY ./Cargo.toml ./Cargo.toml
 RUN cargo build --release
 RUN rm -f src/*.rs
 
-# Copy source code
+# Copy source
 COPY ./src ./src
-
-# install sqlx-cli
-RUN cargo install sqlx-cli
 
 # Copy migrations and sqlx
 COPY migrations ./migrations
 COPY .sqlx ./.sqlx
 
-# prepare sqlx
+# SQLx Offline Mode
 ENV SQLX_OFFLINE=true
-RUN cargo sqlx prepare
 
 # build for release
 RUN rm -f ./target/release/dep/tdx-prover*
 RUN cargo build --release
 
-FROM rust:1.86.0-slim-bullseye
-COPY --from=build /tdx-prover/target/release/tdx-prover .
+FROM debian:bullseye-slim
 
-CMD ["./tdx-prover"]
+# Install only minimal dependencies
+RUN apt-get update && apt-get install -y libpq5 ca-certificates && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /tdx-prover
+COPY --from=build /tdx-prover/target/release/tdx-prover /usr/src/tdx-prover
+
+CMD ["/usr/src/tdx-prover"]

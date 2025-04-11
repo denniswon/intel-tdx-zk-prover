@@ -1,27 +1,86 @@
 services:
-  postgres:
-    container_name: postgres
-    image: postgres:latest
-    environment:
-      POSTGRES_DB: ${DATABASE_NAME}
-      POSTGRES_USER: "${DATABASE_USER}"
-      POSTGRES_PASSWORD: "${DATABASE_PASSWORD}"
-    ports:
-      - "${DATABASE_PORT}:${DATABASE_PORT}"
-    volumes:
-      - ./psql:/var/lib/postgresql/data
-  prover:
-    container_name: tdx-prover
+  # Service for the TDX Prover application
+  tdx-prover:
+    # Build the Docker image from the current directory using the specified Dockerfile
     build:
       context: .
       dockerfile: Dockerfile
-    volumes:
-      - .:/tdx-prover
-    working_dir: /tdx-prover
-    environment:
-      PORT: "${PORT}"
-      DATABASE_URL: "${DATABASE_URL}"
-    depends_on:
-      - postgres
+
+    # Map ports from the container to the host machine
     ports:
-      - "${PORT}:${PORT}"
+      - "${SERVER_PORT:-8002}:${SERVER_PORT:-8002}" # Expose server port
+
+    # Environment variables for the service
+    environment:
+      # Database connection settings
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:postgres@localhost:5432/newton}
+      - PORT=${PORT:-8002}
+      - DATABASE_NAME=${DATABASE_NAME:-newton}
+      - DATABASE_USER=${DATABASE_USER:-postgres}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres}
+      - DATABASE_PORT=${DATABASE_PORT:-5432}
+
+    # Depend on the database service and wait until it's healthy
+    depends_on:
+      db:
+        condition: service_healthy
+
+    # Health check settings
+    healthcheck:
+      # Test the health of the service by checking the /health endpoint
+      test: ["CMD", "curl", "-f", "http://${SERVER_IP:-0.0.0.0}:${SERVER_PORT:-8002}/health"]
+      interval: 10s # Check every 10 seconds
+      timeout: 5s # Timeout after 5 seconds
+      retries: 3 # Retry up to 3 times
+      start_period: 15s # Wait 15 seconds before starting checks
+
+    # Resource limits for the service
+    deploy:
+      resources:
+        limits:
+          # Limit CPU usage (default: 0.5 cores)
+          cpus: '${TDX_PROVER_CPU_LIMIT:-0.5}'
+          # Limit RAM usage (default: 512MB)
+          memory: ${TDX_PROVER_MEMORY_LIMIT:-512M}
+
+  # Service for the PostgreSQL database
+  db:
+    # Use the official PostgreSQL 17 Alpine image
+    image: postgres:17-alpine
+
+    # Always restart the container if it fails
+    restart: always
+
+    # Environment variables for the database
+    environment:
+      # Set database user, password, and database name
+      - POSTGRES_USER=${DATABASE_USER:-postgres}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-postgres}
+      - POSTGRES_DB=${DATABASE_DB:-newton}
+
+    # Map the database port to the host machine
+    ports:
+      - "5432:5432" # Expose PostgreSQL port
+
+    # Mount volumes for database data and logs
+    volumes:
+      - ./docker/db/data:/var/lib/postgresql/data   # Store database data
+      - ./docker/db/logs:/var/log/postgresql        # Store logs
+
+    # Health check settings for the database
+    healthcheck:
+      # Test the health of the database using pg_isready
+      test: ["CMD", "pg_isready", "-U", "${DATABASE_USER:-postgres}"]
+      interval: 60s # Check every minute
+      timeout: 10s # Timeout after 10 seconds
+      retries: 5 # Retry up to 5 times
+      start_period: 15s # Wait 15 seconds before starting checks
+
+    # Resource limits for the database service
+    deploy:
+      resources:
+        limits:
+          # Limit CPU usage (default: 0.5 cores)
+          cpus: '${DB_CPU_LIMIT:-0.5}'
+          # Limit RAM usage (default: 256MB)
+          memory: ${DB_MEMORY_LIMIT:-256M}

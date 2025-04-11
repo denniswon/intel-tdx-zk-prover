@@ -1,0 +1,95 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO agents (agent_owner, agent_name, agent_description, agent_type, agent_uri, agent_status)\n                VALUES ($1, $2, $3, $4, $5, $6)\n                RETURNING\n                id, agent_name, agent_type, agent_uri, agent_description, agent_owner,\n                agent_status as \"agent_status: _\",\n                created_at as \"created_at: _\",\n                updated_at as \"updated_at: _\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 1,
+        "name": "agent_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "agent_type",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "agent_uri",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 4,
+        "name": "agent_description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "agent_owner",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 6,
+        "name": "agent_status: _",
+        "type_info": {
+          "Custom": {
+            "name": "agent_status",
+            "kind": {
+              "Enum": [
+                "active",
+                "inactive"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at: _",
+        "type_info": "Timestamp"
+      },
+      {
+        "ordinal": 8,
+        "name": "updated_at: _",
+        "type_info": "Timestamp"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Varchar",
+        "Varchar",
+        "Text",
+        "Varchar",
+        "Varchar",
+        {
+          "Custom": {
+            "name": "agent_status",
+            "kind": {
+              "Enum": [
+                "active",
+                "inactive"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "eb827714742c14999436e231de8638dc926abee0ae22df5a1f366f2576b5c1c1"
+}

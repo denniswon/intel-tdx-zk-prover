@@ -1,0 +1,61 @@
+# --- Stage 1: Builder Stage ---
+FROM rust:1.86-alpine AS builder
+
+WORKDIR /tdx-prover
+
+# Install required build dependencies for Rust and SQLx
+RUN apk add --no-cache \
+    pkgconfig \
+    openssl-dev \
+    openssl-libs-static \
+    postgresql-dev \
+    build-base \
+    cmake \
+    curl \
+    ninja-build \
+    clang \
+    musl-dev \
+    && rm -rf /var/cache/apk/*
+
+# Cache dependencies (from Cargo.toml and Cargo.lock) to speed up future builds
+COPY Cargo.toml ./
+RUN cargo fetch
+
+# Copy the source code for the application
+COPY src src/
+
+# Set SQLX_OFFLINE to true for offline SQLx compilation
+ENV SQLX_OFFLINE=true
+
+# Copy the pre-generated SQLx metadata for offline mode
+COPY .sqlx .sqlx/
+
+# Copy the migrations folder
+COPY migrations migrations/
+
+# Build the application in release mode
+RUN cargo build --release --locked --no-default-features
+
+# Strip debug symbols to reduce binary size
+RUN strip /tdx-prover/target/release/tdx-prover
+
+# --- Stage 2: Runtime Stage ---
+FROM alpine:latest
+
+# Install runtime dependencies only (ca-certificates, openssl)
+RUN apk add --no-cache \
+    ca-certificates \
+    openssl \
+    openssl-libs-static \
+    && rm -rf /var/cache/apk/*
+
+WORKDIR /tdx-prover
+
+# Copy the built binary from the builder stage
+COPY --from=builder /tdx-prover/target/release/tdx-prover .
+
+# Expose the application port
+EXPOSE 8002
+
+# Run the application when the container starts
+CMD ["./tdx-prover"]

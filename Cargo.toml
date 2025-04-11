@@ -1,7 +1,11 @@
+[[bin]]
+name = "tdx-prover"
+path = "src/main.rs"
+
 [package]
 name = "tdx-prover"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [dependencies]
 anyhow = "1.0.97"
@@ -25,7 +29,7 @@ sqlx = { version = "0.8.3", features = [
     "postgres",
     "chrono",
     "bigdecimal",
-    "uuid",
+    "uuid"
 ] }
 sqlx-cli = "0.8.3"
 strum = { version = "0.27.1", features = ["derive"] }

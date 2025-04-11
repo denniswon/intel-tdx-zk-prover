@@ -1,0 +1,40 @@
+# -------- Build Stage --------
+FROM rust:1.86 AS builder
+
+# Install required libraries for sqlx-postgres
+RUN apt-get update && apt-get install -y pkg-config libssl-dev libpq-dev
+
+# Enable SQLx offline mode and define dummy DB URL
+ENV SQLX_OFFLINE=true
+ENV DATABASE_URL=postgres://postgres:postgres@localhost:5432/newton
+
+WORKDIR /tdx-prover
+
+# Cache dependencies
+COPY Cargo.toml Cargo.lock ./
+RUN mkdir src && echo 'fn main() {}' > src/main.rs
+RUN cargo fetch
+RUN cargo build --release
+
+# Copy source and precompiled dependencies
+COPY . .
+
+# RUN cargo install sqlx-cli --no-default-features --features rustls,postgres
+# RUN cargo sqlx prepare --workspace
+
+# Build final binary
+RUN cargo build --release
+
+# -------- Runtime Stage --------
+FROM debian:bullseye-slim
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y libpq5 ca-certificates && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /tdx-prover
+
+# Copy compiled binary from builder stage
+COPY --from=builder /tdx-prover/target/release/tdx-prover .
+
+# Set entrypoint
+CMD ["./tdx-prover"]
