@@ -24,6 +24,9 @@ RUN cargo fetch
 # Copy the source code for the application
 COPY src src/
 
+# Copy .env file
+COPY .env ./.env
+
 # Set SQLX_OFFLINE to true for offline SQLx compilation
 ENV SQLX_OFFLINE=true
 

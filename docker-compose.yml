@@ -6,7 +6,7 @@ services:
     # Build the Docker image from the current directory using the specified Dockerfile
     build:
       context: .
-      dockerfile: Dockerfile.prod
+      dockerfile: Dockerfile.debian
 
     # Map ports from the container to the host machine
     ports:
