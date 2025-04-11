@@ -1,10 +1,12 @@
+version: '3.8'
+
 services:
   # Service for the TDX Prover application
   tdx-prover:
     # Build the Docker image from the current directory using the specified Dockerfile
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
 
     # Map ports from the container to the host machine
     ports:
@@ -22,7 +24,7 @@ services:
 
     # Depend on the database service and wait until it's healthy
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
 
     # Health check settings
@@ -44,9 +46,8 @@ services:
           memory: ${TDX_PROVER_MEMORY_LIMIT:-512M}
 
   # Service for the PostgreSQL database
-  db:
-    # Use the official PostgreSQL 17 Alpine image
-    image: postgres:17-alpine
+  postgres:
+    image: postgres:latest
 
     # Always restart the container if it fails
     restart: always
