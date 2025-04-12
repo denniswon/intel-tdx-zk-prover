@@ -21,10 +21,7 @@ impl RequestService {
         }
     }
 
-    pub async fn create_request(
-        &self,
-        payload: RequestRegisterDto,
-    ) -> Result<RequestReadDto, ApiError> {
+    pub async fn create(&self, payload: RequestRegisterDto) -> Result<RequestReadDto, ApiError> {
         let request = self.add_request(payload).await;
 
         match request {
@@ -62,6 +59,35 @@ impl RequestService {
             payload.agent_id,
             payload.from_address.to_string(),
             payload.request_data.unwrap_or_default(),
+        )
+        .fetch_one(self.db_conn.get_pool())
+        .await?;
+        Ok(request)
+    }
+
+    pub async fn delete(&self, id: i32) -> Result<RequestReadDto, ApiError> {
+        let request = self.delete_request(id).await;
+        match request {
+            Ok(request) => Ok(RequestReadDto::from(request)),
+            Err(e) => Err(DbError::SomethingWentWrong(e.to_string()))?,
+        }
+    }
+
+    pub async fn delete_request(&self, id: i32) -> Result<Request, SqlxError> {
+        let request = sqlx::query_as!(
+            Request,
+            r#"
+                DELETE FROM requests
+                WHERE id = $1
+                RETURNING
+                id,
+                agent_id,
+                from_address,
+                request_data,
+                request_status as "request_status: _",
+                created_at as "created_at: _"
+            "#,
+            id,
         )
         .fetch_one(self.db_conn.get_pool())
         .await?;

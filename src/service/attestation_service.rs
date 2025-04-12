@@ -88,9 +88,9 @@ impl AttestationService {
                 let quote = attestation.attestation_data;
                 let collateral = get_collateral_from_pcs(&quote, std::time::Duration::from_secs(10)).await.expect("failed to get collateral");
                 let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-                return Ok(verify_quote(&quote, &collateral, now).expect("failed to verify quote"));
+                Ok(verify_quote(&quote, &collateral, now).expect("failed to verify quote"))
             },
-            _ => return Err(AttestationError::Invalid),
+            _ => Err(AttestationError::Invalid),
         }
     }
 

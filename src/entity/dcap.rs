@@ -33,7 +33,7 @@ impl DcapVerifiedOutput {
                         tee_type: output.tee_type,
                         tcb_status: output.tcb_status,
                         fmspc: output.fmspc,
-                        quote_body_type: quote_body_type,
+                        quote_body_type,
                         quote_body_bytes: quote_body.to_bytes().to_vec(),
                         advisory_ids: output.advisory_ids
                     }
@@ -48,7 +48,7 @@ impl DcapVerifiedOutput {
                         tee_type: output.tee_type,
                         tcb_status: output.tcb_status,
                         fmspc: output.fmspc,
-                        quote_body_type: quote_body_type,
+                        quote_body_type,
                         quote_body_bytes: quote_body.to_bytes().to_vec(),
                         advisory_ids: output.advisory_ids
                     }
