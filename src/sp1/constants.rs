@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 // Collateral Path Defaults
 pub const DEFAULT_QUOTE_PATH: &str = "../../data/quote.hex";
 

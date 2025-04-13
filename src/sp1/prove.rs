@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::sp1::chain::attestation::{
     decode_attestation_ret_data, generate_attestation_calldata,
 };
@@ -19,20 +21,20 @@ pub const DCAP_ELF: &[u8] = include_bytes!("../../elf/dcap-sp1-guest-program-elf
 
 /// Enum representing the available proof systems
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-enum ProofSystem {
+pub enum ProofSystem {
     Groth16,
     Plonk,
 }
 
 #[derive(Serialize, Deserialize)]
-struct DcapProof {
+pub struct DcapProof {
     output: Vec<u8>,
     vk: SP1VerifyingKey,
     proof: SP1ProofWithPublicValues,
 }
 
 // proof_system: [Optional] The proof system to use. Default: Groth16
-async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<DcapProof> {
+pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<DcapProof> {
     println!("Begin fetching the necessary collaterals...");
     // Step 1: Determine quote version and TEE type
     let quote_version = u16::from_le_bytes([quote[0], quote[1]]);

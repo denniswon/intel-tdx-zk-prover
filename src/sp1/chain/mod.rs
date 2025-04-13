@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub mod attestation;
 pub mod pccs;
 

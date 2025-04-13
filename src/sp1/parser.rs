@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use x509_parser::oid_registry::asn1_rs::{oid, FromDer, OctetString, Oid, Sequence};
 
 use super::chain::pccs::pcs::IPCSDao::CA;
