@@ -1,7 +1,7 @@
-/target
+**/target
 .env
 !.sqlx
-/docker
+**/docker
 cert.pem
 key.pem
 Claude.md

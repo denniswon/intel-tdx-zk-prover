@@ -17,6 +17,7 @@ mod response;
 mod routes;
 mod service;
 mod state;
+mod sp1;
 
 #[tokio::main]
 async fn main() {
