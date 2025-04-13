@@ -5,6 +5,7 @@ use crate::error::api_error::ApiError;
 use crate::error::attestation_error::AttestationError;
 use crate::error::db_error::DbError;
 use crate::repository::attestation_repository::{AttestationRepository, AttestationRepositoryTrait};
+use crate::sp1::prove::{prove, verify_proof, DcapProof};
 
 use dcap_rs::types::quotes::version_4::QuoteV4;
 use dcap_rs::types::VerifiedOutput;
@@ -41,7 +42,7 @@ impl AttestationService {
         let attestation = self.add_attestation(payload).await;
 
         match attestation {
-            Ok(user) => Ok(AttestationReadDto::from(user)),
+            Ok(attestation) => Ok(AttestationReadDto::from(attestation)),
             Err(e) => match e {
                 SqlxError::Database(e) => match e.code() {
                     Some(code) => {
@@ -138,5 +139,36 @@ impl AttestationService {
             }
         }
         Ok(collaterals)
+    }
+
+    pub async fn prove(&self, id: i32) -> Result<DcapProof, AttestationError> {
+        let attestation = self.attestation_repo.find(id.try_into().unwrap()).await;
+
+        match attestation {
+            Ok(attestation) => {
+                let proof = prove(attestation.attestation_data, None).await;
+                match proof {
+                    Ok(proof) => Ok(proof),
+                    _ => Err(AttestationError::Invalid),
+                }
+            },
+            _ => Err(AttestationError::Invalid.into()),
+        }
+    }
+
+    pub async fn verify(&self, proof: DcapProof) -> Result<VerifiedOutput, AttestationError> {
+        let result = verify_proof(proof).await;
+        match result {
+            Ok(output) => Ok(output),
+            _ => Err(AttestationError::Invalid),
+        }
+    }
+
+    pub async fn submit_proof(&self, proof: DcapProof) -> Result<VerifiedOutput, AttestationError> {
+        let result = verify_proof(proof).await;
+        match result {
+            Ok(output) => Ok(output),
+            _ => Err(AttestationError::Invalid),
+        }
     }
 }

@@ -16,6 +16,7 @@ use dcap_rs::constants::{SGX_TEE_TYPE, TDX_TEE_TYPE};
 use dcap_rs::types::{collaterals::IntelCollateral, VerifiedOutput};
 use serde::{Deserialize, Serialize};
 use sp1_sdk::{HashableKey, ProverClient, SP1ProofWithPublicValues, SP1Stdin, SP1VerifyingKey};
+use validator::Validate;
 
 pub const DCAP_ELF: &[u8] = include_bytes!("../../elf/dcap-sp1-guest-program-elf");
 
@@ -26,7 +27,7 @@ pub enum ProofSystem {
     Plonk,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize, Validate)]
 pub struct DcapProof {
     output: Vec<u8>,
     vk: SP1VerifyingKey,
@@ -167,14 +168,14 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
     })
 }
 
-pub fn verify_proof(proof: SP1ProofWithPublicValues, vk: SP1VerifyingKey, output: Vec<u8>) -> Result<VerifiedOutput> {
+pub async fn verify_proof(proof: DcapProof) -> Result<VerifiedOutput> {
     // Verify proof
     let client = ProverClient::from_env();
 
-    client.verify(&proof, &vk).expect("Failed to verify proof");
+    client.verify(&proof.proof, &proof.vk).expect("Failed to verify proof");
     println!("Successfully verified proof.");
 
-    let parsed_output = VerifiedOutput::from_bytes(&output);
+    let parsed_output = VerifiedOutput::from_bytes(&proof.output);
     println!("{:?}", parsed_output);
     Ok(parsed_output)
 }
