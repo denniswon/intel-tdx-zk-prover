@@ -21,7 +21,7 @@ pub enum VerificationStatus {
     Failed,
 }
 
-#[derive(strum_macros::Display, Debug, Clone, sqlx::Type, Deserialize, Serialize)]
+#[derive(strum_macros::Display, Debug, Clone, Copy, sqlx::Type, Deserialize, Serialize)]
 #[strum(serialize_all = "snake_case")]
 #[sqlx(type_name = "attestation_type", rename_all = "snake_case")]
 pub enum AttestationType {
