@@ -54,7 +54,7 @@ pub async fn get_enclave_identity(id: EnclaveIdType, version: u32) -> Result<Vec
     let identity_str = call_return.enclaveIdObj.identityStr;
     let signature_bytes = call_return.enclaveIdObj.signature;
 
-    if identity_str.len() == 0 || signature_bytes.len() == 0 {
+    if identity_str.is_empty() || signature_bytes.len() == 0 {
         return Err(anyhow::Error::msg(format!(
             "QEIdentity for ID: {:?}; Version: {} is missing and must be upserted to on-chain pccs",
             id, version

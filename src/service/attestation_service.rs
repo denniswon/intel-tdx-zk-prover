@@ -152,7 +152,7 @@ impl AttestationService {
                     _ => Err(AttestationError::Invalid),
                 }
             },
-            _ => Err(AttestationError::Invalid.into()),
+            _ => Err(AttestationError::Invalid),
         }
     }
 
