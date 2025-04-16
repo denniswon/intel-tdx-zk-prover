@@ -1,5 +1,6 @@
 use crate::entity::attestation::{Attestation, AttestationType, VerificationStatus};
-use chrono::{DateTime, Utc};
+use axum::body::Bytes;
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
@@ -10,14 +11,14 @@ pub struct AttestationDto {
     pub attestation_type: AttestationType,
     pub verification_status: VerificationStatus,
     pub attestation_data: Vec<u8>,
-    pub created_at: DateTime<Utc>,
+    pub created_at: NaiveDateTime,
 }
 
 #[derive(Clone, Serialize, Deserialize, Validate)]
 pub struct AttestationRegisterDto {
     pub request_id: i32,
     pub attestation_type: AttestationType,
-    pub attestation_data: Vec<u8>,
+    pub attestation_data: Bytes,
 }
 
 #[derive(Clone, Deserialize, Serialize)]
@@ -27,7 +28,7 @@ pub struct AttestationReadDto {
     pub attestation_type: AttestationType,
     pub verification_status: VerificationStatus,
     pub attestation_data: Vec<u8>,
-    pub created_at: DateTime<Utc>,
+    pub created_at: NaiveDateTime,
 }
 
 impl AttestationReadDto {

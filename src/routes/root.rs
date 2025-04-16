@@ -5,10 +5,11 @@ use crate::state::request_state::RequestState;
 use axum::body::Bytes;
 use axum::routing::{IntoMakeService, get};
 use axum::Router;
-use tower_http::LatencyUnit;
+use tower_http::classify::ServerErrorsFailureClass;
 use std::sync::Arc;
 use std::time::Duration;
-use tower_http::trace::{TraceLayer, DefaultMakeSpan, DefaultOnResponse};
+use tower_http::LatencyUnit;
+use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 
 use super::{agent, attestation, request};
 
@@ -33,7 +34,13 @@ pub fn routes(db_conn: Arc<Database>) -> IntoMakeService<Router> {
                     tracing::trace!(size_bytes = chunk.len(), latency = ?latency, "sending body chunk")
                 })
                 .make_span_with(DefaultMakeSpan::new().include_headers(true))
-                .on_response(DefaultOnResponse::new().include_headers(true).latency_unit(LatencyUnit::Micros)),
+                .on_response(DefaultOnResponse::new().include_headers(true).latency_unit(LatencyUnit::Micros))
+                .on_failure(
+                    |error: ServerErrorsFailureClass, latency: Duration, _span: &tracing::Span| {
+                        tracing::error!("Request failed: {:?}", error);
+                        tracing::debug!("Request failed after {:?}", latency);
+                    },
+                ),
         );
 
     app_router.into_make_service()

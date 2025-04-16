@@ -46,9 +46,7 @@ impl RequestRepositoryTrait for RequestRepository {
                 id,
                 agent_id,
                 from_address,
-                prompt,
                 request_data,
-                fee_amount as "fee_amount: _",
                 request_status as "request_status: _",
                 created_at as "created_at: _"
                 FROM requests
@@ -65,9 +63,7 @@ impl RequestRepositoryTrait for RequestRepository {
                 id,
                 agent_id,
                 from_address,
-                prompt,
                 request_data,
-                fee_amount as "fee_amount: _",
                 request_status as "request_status: _",
                 created_at as "created_at: _"
                 FROM requests
@@ -126,9 +122,7 @@ impl RequestRepositoryTrait for RequestRepository {
             id,
             agent_id,
             from_address,
-            prompt,
             request_data,
-            fee_amount as "fee_amount: _",
             request_status as "request_status: _",
             created_at as "created_at: _"
             FROM requests WHERE id = $1"#,

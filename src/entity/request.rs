@@ -1,22 +1,21 @@
-use chrono::{DateTime, Utc};
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 
-use super::evm::{EvmAddress, WeiAmount};
+use super::evm::EvmAddress;
 
-#[derive(Clone, Deserialize, Serialize, FromRow)]
+#[derive(Clone, Debug, Deserialize, Serialize, FromRow)]
 pub struct Request {
     pub id: i32,
     pub agent_id: i32,
     pub from_address: EvmAddress,
-    pub prompt: String,
     pub request_data: Option<Vec<u8>>,
-    pub fee_amount: WeiAmount,
     pub request_status: RequestStatus,
-    pub created_at: DateTime<Utc>,
+    pub created_at: NaiveDateTime,
 }
 
 #[derive(strum_macros::Display, Debug, Clone, sqlx::Type, Deserialize, Serialize)]
+#[strum(serialize_all = "snake_case")]
 #[sqlx(type_name = "request_status", rename_all = "snake_case")]
 pub enum RequestStatus {
     Fulfilled,

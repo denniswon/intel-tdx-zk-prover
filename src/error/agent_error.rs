@@ -6,21 +6,22 @@ use axum::{
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[allow(dead_code)]
 pub enum AgentError {
     #[error("Agent not found")]
-    AgentNotFound,
+    NotFound,
     #[error("Agent invalid")]
-    AgentInvalid,
+    Invalid,
     #[error("Agent unauthorized")]
-    AgentUnauthorized,
+    Unauthorized,
 }
 
 impl IntoResponse for AgentError {
     fn into_response(self) -> Response {
         let status_code = match self {
-            AgentError::AgentNotFound => StatusCode::NOT_FOUND,
-            AgentError::AgentInvalid => StatusCode::BAD_REQUEST,
-            AgentError::AgentUnauthorized => StatusCode::UNAUTHORIZED,
+            AgentError::NotFound => StatusCode::NOT_FOUND,
+            AgentError::Invalid => StatusCode::BAD_REQUEST,
+            AgentError::Unauthorized => StatusCode::UNAUTHORIZED,
         };
 
         ApiErrorResponse::send(status_code.as_u16(), Some(self.to_string()))

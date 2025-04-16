@@ -1,13 +1,12 @@
 use crate::error::{
-    db_error::DbError,
-    attestation_error::AttestationError,
-    agent_error::AgentError,
-    request_error::RequestError
+    agent_error::AgentError, attestation_error::AttestationError, db_error::DbError,
+    request_error::RequestError,
 };
 use axum::response::{IntoResponse, Response};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
+#[allow(dead_code, clippy::enum_variant_names)]
 pub enum ApiError {
     #[error(transparent)]
     DbError(#[from] DbError),

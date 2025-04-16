@@ -19,10 +19,10 @@ pub async fn query(
     Path(id): Path<i32>,
 ) -> Result<Json<AgentReadDto>, ApiError> {
     let agent: Result<Agent, DbError> = state.agent_repo.find(id.try_into().unwrap()).await;
-    return match agent {
+    match agent {
         Ok(agent) => Ok(Json(AgentReadDto::from(agent))),
         Err(e) => Err(ApiError::DbError(e)),
-    };
+    }
 }
 
 pub async fn register(
@@ -30,8 +30,8 @@ pub async fn register(
     ValidatedRequest(payload): ValidatedRequest<AgentRegisterDto>,
 ) -> Result<Json<AgentReadDto>, ApiError> {
     let agent = state.agent_service.create_agent(payload).await;
-    return match agent {
+    match agent {
         Ok(agent) => Ok(Json(agent)),
         Err(e) => Err(e),
-    };
+    }
 }

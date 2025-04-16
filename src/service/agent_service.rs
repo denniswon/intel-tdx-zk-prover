@@ -24,7 +24,7 @@ impl AgentService {
     pub async fn create_agent(&self, payload: AgentRegisterDto) -> Result<AgentReadDto, ApiError> {
         let agent = self.add_agent(payload).await;
 
-        return match agent {
+        match agent {
             Ok(agent) => Ok(AgentReadDto::from(agent)),
             Err(e) => match e {
                 SqlxError::Database(e) => match e.code() {
@@ -39,7 +39,7 @@ impl AgentService {
                 },
                 _ => Err(DbError::SomethingWentWrong(e.to_string()))?,
             },
-        };
+        }
     }
 
     async fn add_agent(&self, payload: AgentRegisterDto) -> Result<Agent, SqlxError> {
@@ -56,13 +56,13 @@ impl AgentService {
             "#,
             payload.agent_owner.to_string(),
             payload.agent_name,
-            payload.agent_description,
+            payload.agent_description.unwrap_or_default(),
             payload.agent_type,
             payload.agent_uri,
-            payload.agent_status as AgentStatus
+            payload.agent_status.unwrap_or(AgentStatus::Active) as AgentStatus
         )
         .fetch_one(self.db_conn.get_pool())
         .await?;
-        return Ok(agent);
+        Ok(agent)
     }
 }
