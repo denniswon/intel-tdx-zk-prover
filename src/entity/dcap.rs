@@ -20,6 +20,8 @@ pub enum QuoteBodyType {
 
 impl DcapVerifiedOutput {
     pub fn from_output(output: VerifiedOutput) -> DcapVerifiedOutput {
+        println!("output: {:?}", output);
+        
         let quote_body_type = match output.quote_body {
             QuoteBody::SGXQuoteBody(_) => QuoteBodyType::SGXQuoteBody,
             QuoteBody::TD10QuoteBody(_) => QuoteBodyType::TD10QuoteBody
@@ -33,7 +35,7 @@ impl DcapVerifiedOutput {
                         tee_type: output.tee_type,
                         tcb_status: output.tcb_status,
                         fmspc: output.fmspc,
-                        quote_body_type: quote_body_type,
+                        quote_body_type,
                         quote_body_bytes: quote_body.to_bytes().to_vec(),
                         advisory_ids: output.advisory_ids
                     }
@@ -48,7 +50,7 @@ impl DcapVerifiedOutput {
                         tee_type: output.tee_type,
                         tcb_status: output.tcb_status,
                         fmspc: output.fmspc,
-                        quote_body_type: quote_body_type,
+                        quote_body_type,
                         quote_body_bytes: quote_body.to_bytes().to_vec(),
                         advisory_ids: output.advisory_ids
                     }

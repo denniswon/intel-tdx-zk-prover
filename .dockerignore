@@ -22,9 +22,6 @@ README.md
 **/*.rs.bk
 Cargo.lock
 
-# Environment
-.env
-
 # IDE
 .idea
 .vscode
@@ -34,3 +31,5 @@ Cargo.lock
 # OS
 .DS_Store
 Thumbs.db
+Claude.md
+/data

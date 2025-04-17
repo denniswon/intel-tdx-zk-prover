@@ -5,6 +5,7 @@ use crate::error::db_error::DbError;
 use crate::error::{api_error::ApiError, api_request_error::ValidatedRequest};
 use crate::repository::attestation_repository::AttestationRepositoryTrait;
 use crate::response::api_response::ApiSuccessResponse;
+use crate::sp1::prove::DcapProof;
 use crate::state::attestation_state::AttestationState;
 use axum::{
     Json,
@@ -76,5 +77,47 @@ pub async fn verify_dcap(
             }
         },
         Err(e) => Err(ApiError::DbError(e)),
+    }
+}
+
+pub async fn prove(
+    State(state): State<AttestationState>,
+    Path(id): Path<i32>,
+) -> Result<Json<DcapProof>, ApiError> {
+    let proof = state
+        .attestation_service
+        .prove(id.try_into().unwrap())
+        .await;
+    match proof {
+        Ok(proof) => Ok(Json(proof)),
+        Err(e) => Err(ApiError::AttestationError(e)),
+    }
+}
+
+pub async fn verify(
+    State(state): State<AttestationState>,
+    ValidatedRequest(payload): ValidatedRequest<DcapProof>,
+) -> Result<Json<DcapVerifiedOutput>, ApiError> {
+    let output = state
+        .attestation_service
+        .verify(payload)
+        .await;
+    match output {
+        Ok(output) => Ok(Json(DcapVerifiedOutput::from_output(output))),
+        Err(e) => Err(ApiError::AttestationError(e)),
+    }
+}
+
+pub async fn submit_proof(
+    State(state): State<AttestationState>,
+    ValidatedRequest(payload): ValidatedRequest<DcapProof>,
+) -> Result<Json<DcapVerifiedOutput>, ApiError> {
+    let output = state
+        .attestation_service
+        .submit_proof(payload)
+        .await;
+    match output {
+        Ok(output) => Ok(Json(DcapVerifiedOutput::from_output(output))),
+        Err(e) => Err(ApiError::AttestationError(e)),
     }
 }

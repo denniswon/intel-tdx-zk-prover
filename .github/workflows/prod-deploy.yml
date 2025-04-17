@@ -1,0 +1,99 @@
+name: Prod Deploy
+
+on:
+  workflow_dispatch:
+
+permissions:
+  pull-requests: write # so we can comment on PR
+  id-token: write # This is required for aws creds requesting the JWT
+  contents: read  # This is required for aws creds actions/checkout
+
+jobs:
+  publish_prod:
+    name: Publish Prod
+    uses: ./.github/workflows/publish.yml
+    # We need to review this,
+    # because we should validate the build,
+    # but not publish it when dependabot runs.
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.13']
+    with:
+      python: ${{ matrix.python }}
+      # Used during image builds
+      aws_account: '584864542664'
+      aws_region: us-west-2
+      aws_role_name: github-magiclabs-role
+    secrets: inherit
+
+  cdk_diff_prod:
+    name: CDK Diff Prod
+    uses: ./.github/workflows/reusable-cdk.yml
+    with:
+        AWS_ACCOUNT: '730335646197'
+        AWS_REGION: 'us-west-2'
+        CDK_ACTION_TYPE: diff
+        CDK_DEPLOY_ENV: prod
+        CDK_WORKING_DIR: deploy
+        CONTEXT_FLAGS: ''
+        NODE_VERSION: '22'
+        PYTHON_VERSION: '3.13'
+        ROLE_NAME: 'github-magiclabs-fridge-role'
+        USW2_ECS_CLUSTER_NAME: 'arn:aws:ecs:us-west-2:730335646197:cluster/flamingo-ecs-cluster'
+        USW2_VPC_ID: 'vpc-087584d71d4a76832'
+        APNE2_VPC_ID: 'vpc-000d8b8d7844e622c'
+        APNE2_ECS_CLUSTER_NAME: 'arn:aws:ecs:ap-northeast-2:730335646197:cluster/flamingo-ecs-cluster'
+        OPS_ECR_REPOSITORY_ARN: "arn:aws:ecr:us-west-2:584864542664:repository/fridge"
+        OPS_AWS_ACCOUNT: '584864542664'
+        USW2_DB_SECURITY_GROUP_ID: 'sg-0fda0cee679a46890'
+        APNE2_DB_SECURITY_GROUP_ID: 'sg-090c00e3328e24c26'
+        TEE_ROOT_URL: "https://tee.magiclabs.com"
+        FORTMATIC_ROOT_URL: "https://api.magic.link"
+    secrets: inherit
+
+  merge_ready:
+    name: Results
+    runs-on: ubuntu-latest
+    needs: [publish_prod, cdk_diff_prod]
+    if: |
+      always() &&
+      (needs.publish_prod.result == 'success' || needs.publish_prod.result == 'skipped')
+    outputs:
+      image_tag: ${{ needs.publish_prod.output.image_tag }}
+    steps:
+      - name: 'Output TAG'
+        run: echo IMAGE_TAG=${{needs.publish_prod.outputs.image_tag}}
+      - run: exit 1
+        if: >-
+          ${{
+                contains(needs.*.result, 'failure')
+            ||  contains(needs.*.result, 'cancelled')
+          }}
+
+  cdk_deploy_prod:
+    name: CDK Deploy prod
+    needs: [merge_ready]
+    uses: ./.github/workflows/reusable-cdk.yml
+    if: ${{ !cancelled() && github.ref == 'refs/heads/master' }}
+    with:
+        AWS_ACCOUNT: '730335646197'
+        AWS_REGION: 'us-west-2'
+        CDK_ACTION_TYPE: deploy
+        CDK_DEPLOY_ENV: prod
+        CDK_WORKING_DIR: deploy
+        CONTEXT_FLAGS: ''
+        NODE_VERSION: '22'
+        PYTHON_VERSION: '3.13'
+        ROLE_NAME: 'github-magiclabs-fridge-role'
+        USW2_ECS_CLUSTER_NAME: 'arn:aws:ecs:us-west-2:730335646197:cluster/flamingo-ecs-cluster'
+        USW2_VPC_ID: 'vpc-087584d71d4a76832'
+        APNE2_VPC_ID: 'vpc-000d8b8d7844e622c'
+        APNE2_ECS_CLUSTER_NAME: 'arn:aws:ecs:ap-northeast-2:730335646197:cluster/flamingo-ecs-cluster'
+        OPS_ECR_REPOSITORY_ARN: "arn:aws:ecr:us-west-2:584864542664:repository/fridge"
+        OPS_AWS_ACCOUNT: '584864542664'
+        USW2_DB_SECURITY_GROUP_ID: 'sg-0fda0cee679a46890'
+        APNE2_DB_SECURITY_GROUP_ID: 'sg-090c00e3328e24c26'
+        TEE_ROOT_URL: "https://tee.magiclabs.com"
+        FORTMATIC_ROOT_URL: "https://api.magic.link"
+    secrets: inherit

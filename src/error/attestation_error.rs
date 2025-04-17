@@ -6,7 +6,6 @@ use axum::{
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-#[allow(dead_code)]
 pub enum AttestationError {
     #[error("Attestation not found")]
     NotFound,

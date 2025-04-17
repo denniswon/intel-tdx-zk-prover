@@ -8,22 +8,27 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+alloy = { version = "0.11.0", features = ["full"] }
 anyhow = "1.0.97"
 async-trait = "0.1.88"
 axum = "0.8.3"
 bcrypt = "0.17.0"
 bigdecimal = { version = "0.4.8", features = ["serde"] }
 bigdecimal-ethers-ext = "0.2.1"
+c-kzg = "1.0.3"
 chrono = { version = "0.4.40", features = ["serde"] }
+clap = "4.5.36"
 dcap-qvl = "0.2.3"
 dcap-rs = { git = "https://github.com/automata-network/dcap-rs.git" }
 dotenvy = "0.15.7"
 ethereum-types = "0.15.1"
 ethers_primitives = "0.2.2"
+hex = "0.4.3"
 hyper = "1.6.0"
 mockall = "0.13.1"
 serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.140"
+serde_json = { version = "1.0.140", features = ["alloc"] }
+sp1-sdk = "^4.1.0"
 sqlx = { version = "0.8.3", features = [
     "runtime-tokio",
     "tls-native-tls",
@@ -42,7 +47,7 @@ tower-http = { version = "0.6.2", features = ["full"] }
 tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 validator = { version = "0.20.0", features = ["derive"] }
+x509-parser = "0.17.0"
 
-[patch.crates-io]
-sha2 = { git = "https://github.com/sp1-patches/RustCrypto-hashes", branch = "patch-sha2-v0.10.8" }
-crypto-bigint = { git = "https://github.com/sp1-patches/RustCrypto-bigint", branch = "patch-v0.5.5" }
+[build-dependencies]
+sp1-helper = "4.0.1"

@@ -6,8 +6,8 @@ use crate::repository::request_repository::RequestRepositoryTrait;
 use crate::response::api_response::ApiSuccessResponse;
 use crate::state::request_state::RequestState;
 use axum::{
-    Json,
     extract::{Extension, Path, State},
+    Json,
 };
 
 pub async fn get(
@@ -31,6 +31,14 @@ pub async fn register(
     State(state): State<RequestState>,
     ValidatedRequest(payload): ValidatedRequest<RequestRegisterDto>,
 ) -> Result<Json<RequestReadDto>, ApiError> {
-    let request = state.request_service.create_request(payload).await?;
+    let request = state.request_service.create(payload).await?;
+    Ok(Json(request))
+}
+
+pub async fn delete(
+    State(state): State<RequestState>,
+    Path(id): Path<i32>,
+) -> Result<Json<RequestReadDto>, ApiError> {
+    let request = state.request_service.delete(id.try_into().unwrap()).await?;
     Ok(Json(request))
 }

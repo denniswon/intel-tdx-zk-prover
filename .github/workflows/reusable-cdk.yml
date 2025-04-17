@@ -1,0 +1,136 @@
+name: Reusable CDK
+
+on:
+  workflow_call:
+    inputs:
+      AWS_ACCOUNT:
+        required: true
+        type: string
+      AWS_REGION:
+        required: true
+        type: string
+      CDK_ACTION_TYPE:
+        required: true
+        type: string
+      CDK_DEPLOY_ENV:
+        required: true
+        type: string
+      CDK_WORKING_DIR:
+        required: true
+        type: string
+      CONTEXT_FLAGS:
+        required: true
+        type: string
+      ENABLE_DEBUG:
+        required: false
+        type: string
+      NODE_VERSION:
+        required: true
+        type: string
+      ROLE_NAME:
+        required: true
+        type: string
+      PYTHON_VERSION:
+        required: true
+        type: string
+      OPS_ECR_REPOSITORY_ARN:
+        required: true
+        type: string
+      OPS_AWS_ACCOUNT:
+        required: true
+        type: string
+      USW2_VPC_ID:
+        required: true
+        type: string
+      APNE2_VPC_ID:
+        required: true
+        type: string
+      USW2_ECS_CLUSTER_NAME:
+        required: true
+        type: string
+      APNE2_ECS_CLUSTER_NAME:
+        required: true
+        type: string
+      USW2_DB_SECURITY_GROUP_ID:
+        required: true
+        type: string
+      APNE2_DB_SECURITY_GROUP_ID:
+        required: true
+        type: string
+
+permissions:
+  pull-requests: write # so we can comment on PR
+  id-token: write # This is required for aws creds requesting the JWT
+  contents: read  # This is required for aws creds actions/checkout
+
+jobs:
+  cdk:
+    runs-on: self-hosted
+    name: "cdk_${{ inputs.CDK_ACTION_TYPE }}"
+    concurrency: "${{ inputs.CDK_DEPLOY_ENV }}_environment"
+    environment: ${{ inputs.CDK_DEPLOY_ENV }}
+    steps:
+    - uses: actions/checkout@v4
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: '${{ inputs.CDK_WORKING_DIR }}/package.json'
+
+    - name: Setup UV and check CDK install
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+        python-version: ${{ inputs.PYTHON_VERSION }}
+    - run: |
+        cd ${{ inputs.CDK_WORKING_DIR }}
+        uv sync && uv run npx cdk version
+
+    - name: Verify CDK Action
+      working-directory: ${{ inputs.CDK_WORKING_DIR }}
+      run: |
+        echo "CDK_ACTION_TYPE: ${{ inputs.CDK_ACTION_TYPE }}"
+        if [[ "${{ inputs.CDK_ACTION_TYPE }}" == "deploy" ]];then
+          echo "adding extra args for cdk deploy..."
+          echo "cdk_extra_args=$(echo '--require-approval never')" >> $GITHUB_ENV
+        fi
+
+        if [[ "${{ inputs.CONTEXT_FLAGS }}" ]];then
+          echo "context flags adding..."
+          echo "${{ inputs.CONTEXT_FLAGS }}"
+        fi
+
+    - name: configure aws credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: arn:aws:iam::${{ inputs.AWS_ACCOUNT }}:role/${{ inputs.ROLE_NAME }}
+        aws-region: ${{ inputs.AWS_REGION }}
+
+    - name: Get short git hash
+      id: git-commit
+      run: echo "short_sha=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+    - name: Get long git hash
+      id: long-git-commit
+      run: echo "long_sha=$(git rev-parse HEAD)" >> $GITHUB_ENV
+
+    - name: "cdk ${{ inputs.CDK_ACTION_TYPE }} workdir ${{ inputs.CDK_WORKING_DIR }}"
+      working-directory: ${{ inputs.CDK_WORKING_DIR }}
+      env:
+        AWS_ACCOUNT: ${{ inputs.AWS_ACCOUNT }}
+        AWS_REGION: ${{ inputs.AWS_REGION }}
+        CDK_DEPLOY_ACCOUNT: ${{ inputs.AWS_ACCOUNT }}
+        CDK_DEPLOY_ENV: ${{ inputs.CDK_DEPLOY_ENV }}
+        ROLE_NAME: ${{ inputs.ROLE_NAME }}
+        USW2_VPC_ID: ${{ inputs.USW2_VPC_ID }}
+        USW2_ECS_CLUSTER_NAME: ${{ inputs.USW2_ECS_CLUSTER_NAME }}
+        APNE2_VPC_ID: ${{ inputs.APNE2_VPC_ID }}
+        APNE2_ECS_CLUSTER_NAME: ${{ inputs.APNE2_ECS_CLUSTER_NAME }}
+        OPS_ECR_REPOSITORY_ARN: ${{ inputs.OPS_ECR_REPOSITORY_ARN }}
+        OPS_AWS_ACCOUNT: ${{ inputs.OPS_AWS_ACCOUNT }}
+        USW2_DB_SECURITY_GROUP_ID: ${{ inputs.USW2_DB_SECURITY_GROUP_ID }}
+        APNE2_DB_SECURITY_GROUP_ID: ${{ inputs.APNE2_DB_SECURITY_GROUP_ID }}
+      run: |
+        uv run npx cdk ${{ inputs.CDK_ACTION_TYPE }} --all ${{ inputs.ENABLE_DEBUG }} ${{ env.cdk_extra_args }} \
+        --context git_commit=${{ env.short_sha }} --context long_git_commit=${{ env.long_sha }} ${{ inputs.CONTEXT_FLAGS }}

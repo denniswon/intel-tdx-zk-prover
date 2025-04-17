@@ -1,0 +1,5 @@
+# Runtime stage
+FROM public.ecr.aws/docker/library/nginx:1.25.2-alpine
+
+# Run the application
+CMD ["nginx", "-g", "daemon off;"]

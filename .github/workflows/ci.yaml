@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'master'
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  publish_stagef:
+    name: Publish Stagef
+    uses: ./.github/workflows/publish.yml
+    # We need to review this,
+    # because we should validate the build,
+    # but not publish it when dependabot runs.
+    if: ${{ github.actor != 'dependabot[bot]' }}
+    strategy:
+      fail-fast: false
+    with:
+      # Used during image builds
+      aws_account: '584864542664'
+      aws_region: us-west-2
+      aws_role_name: github-magiclabs-role
+    secrets: inherit
+
+  cdk_diff_stagef:
+    name: CDK Diff Magic 2.0 StageF
+    uses: ./.github/workflows/reusable-cdk.yml
+    with:
+        AWS_ACCOUNT: '637423541619'
+        AWS_REGION: 'us-west-2'
+        CDK_ACTION_TYPE: diff
+        CDK_DEPLOY_ENV: stagef
+        CDK_WORKING_DIR: deploy
+        CONTEXT_FLAGS: ''
+        NODE_VERSION: '22'
+        PYTHON_VERSION: '3.13'
+        ROLE_NAME: 'github-magiclabs-tdx-prover-role'
+        USW2_ECS_CLUSTER_NAME: 'arn:aws:ecs:us-west-2:637423541619:cluster/PassportIdentityUSW2-passportidentityecs41B5DFD6-oxlKMpe8BMxe'
+        USW2_VPC_ID: 'vpc-0f550d4cbc183890a'
+        APNE2_VPC_ID: 'vpc-0b9ea814a150f9de5'
+        APNE2_ECS_CLUSTER_NAME: 'arn:aws:ecs:ap-northeast-2:637423541619:cluster/PassportIdentityAPNE2-passportidentityecs41B5DFD6-ChPsHcoQuj1Y'
+        OPS_ECR_REPOSITORY_ARN: "arn:aws:ecr:us-west-2:584864542664:repository/tdx-prover"
+        OPS_AWS_ACCOUNT: '584864542664'
+        USW2_DB_SECURITY_GROUP_ID: 'sg-0f8ac15b269bcfb56'
+        APNE2_DB_SECURITY_GROUP_ID: 'sg-001edfae64f86ad35'
+    secrets: inherit
+
+  cdk_deploy_stagef:
+      name: CDK Deploy Magic 2.0 StageF
+      needs: [cdk_diff_stagef]
+      if: github.ref == 'refs/heads/master'
+      uses: ./.github/workflows/reusable-cdk.yml
+      with:
+        AWS_ACCOUNT: '637423541619'
+        AWS_REGION: 'us-west-2'
+        CDK_ACTION_TYPE: deploy
+        CDK_DEPLOY_ENV: stagef
+        CDK_WORKING_DIR: deploy
+        CONTEXT_FLAGS: ''
+        NODE_VERSION: '22'
+        PYTHON_VERSION: '3.13'
+        ROLE_NAME: 'github-magiclabs-tdx-prover-role'
+        USW2_ECS_CLUSTER_NAME: 'arn:aws:ecs:us-west-2:637423541619:cluster/PassportIdentityUSW2-passportidentityecs41B5DFD6-oxlKMpe8BMxe'
+        USW2_VPC_ID: 'vpc-0f550d4cbc183890a'
+        APNE2_VPC_ID: 'vpc-0b9ea814a150f9de5'
+        APNE2_ECS_CLUSTER_NAME: 'arn:aws:ecs:ap-northeast-2:637423541619:cluster/PassportIdentityAPNE2-passportidentityecs41B5DFD6-ChPsHcoQuj1Y'
+        OPS_ECR_REPOSITORY_ARN: "arn:aws:ecr:us-west-2:584864542664:repository/tdx-prover"
+        OPS_AWS_ACCOUNT: '584864542664'
+        USW2_DB_SECURITY_GROUP_ID: 'sg-0f8ac15b269bcfb56'
+        APNE2_DB_SECURITY_GROUP_ID: 'sg-001edfae64f86ad35'
+      secrets: inherit
+
+  # cdk_deploy_prod:
+  #     name: CDK Deploy prod
+  #     needs: [cdk_deploy_stagef]
+  #     uses: ./.github/workflows/reusable-cdk.yml
+  #     if: ${{ !cancelled() && github.ref == 'refs/heads/master' }}
+  #     with:
+  #         AWS_ACCOUNT: '730335646197'
+  #         AWS_REGION: 'us-west-2'
+  #         CDK_ACTION_TYPE: deploy
+  #         CDK_DEPLOY_ENV: prod
+  #         CDK_WORKING_DIR: deploy
+  #         CONTEXT_FLAGS: ''
+  #         NODE_VERSION: '22'
+  #         PYTHON_VERSION: '3.13'
+  #         ROLE_NAME: 'github-magiclabs-fridge-role'
+  #         USW2_ECS_CLUSTER_NAME: 'arn:aws:ecs:us-west-2:730335646197:cluster/flamingo-ecs-cluster'
+  #         USW2_VPC_ID: 'vpc-087584d71d4a76832'
+  #         APNE2_VPC_ID: 'vpc-000d8b8d7844e622c'
+  #         APNE2_ECS_CLUSTER_NAME: 'arn:aws:ecs:ap-northeast-2:730335646197:cluster/flamingo-ecs-cluster'
+  #         OPS_ECR_REPOSITORY_ARN: "arn:aws:ecr:us-west-2:584864542664:repository/fridge"
+  #         OPS_AWS_ACCOUNT: '584864542664'
+  #         USW2_DB_SECURITY_GROUP_ID: 'sg-0fda0cee679a46890'
+  #         APNE2_DB_SECURITY_GROUP_ID: 'sg-090c00e3328e24c26'
+  #         TEE_ROOT_URL: "https://tee.magiclabs.com"
+  #         FORTMATIC_ROOT_URL: "https://api.magic.link"
+  #     secrets: inherit

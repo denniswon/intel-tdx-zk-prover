@@ -9,4 +9,7 @@ pub fn routes() -> Router<AttestationState> {
         .route("/attestation/{id}", get(attestation_handler::query))
         .route("/attestation/verify_dcap_qvl/{id}", get(attestation_handler::verify_dcap_qvl))
         .route("/attestation/verify_dcap/{id}", get(attestation_handler::verify_dcap))
+        .route("/attestation/prove/{id}", get(attestation_handler::prove))
+        .route("/attestation/verify", post(attestation_handler::verify))
+        .route("/attestation/submit_proof", post(attestation_handler::submit_proof))
 }

@@ -25,7 +25,7 @@ RUN cargo fetch
 COPY src src/
 
 # Copy .env file
-COPY .env ./.env
+COPY .env.example ./.env
 
 # Set SQLX_OFFLINE to true for offline SQLx compilation
 ENV SQLX_OFFLINE=true
@@ -59,6 +59,9 @@ COPY --from=builder /tdx-prover/target/release/tdx-prover .
 
 # Expose the application port
 EXPOSE 8002
+
+# Copy the .env file from the builder stage
+COPY --from=builder /tdx-prover/.env ./.env
 
 # Run the application when the container starts
 CMD ["./tdx-prover"]
