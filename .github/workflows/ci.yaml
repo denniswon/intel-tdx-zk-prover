@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - 'master'
+      - 'main'
   pull_request:
     branches:
       - '*'
@@ -52,7 +52,7 @@ jobs:
   cdk_deploy_stagef:
       name: CDK Deploy Magic 2.0 StageF
       needs: [cdk_diff_stagef]
-      if: github.ref == 'refs/heads/master'
+      if: github.ref == 'refs/heads/main'
       uses: ./.github/workflows/reusable-cdk.yml
       with:
         AWS_ACCOUNT: '637423541619'
@@ -78,7 +78,7 @@ jobs:
   #     name: CDK Deploy prod
   #     needs: [cdk_deploy_stagef]
   #     uses: ./.github/workflows/reusable-cdk.yml
-  #     if: ${{ !cancelled() && github.ref == 'refs/heads/master' }}
+  #     if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
   #     with:
   #         AWS_ACCOUNT: '730335646197'
   #         AWS_REGION: 'us-west-2'

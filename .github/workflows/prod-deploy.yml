@@ -75,7 +75,7 @@ jobs:
     name: CDK Deploy prod
     needs: [merge_ready]
     uses: ./.github/workflows/reusable-cdk.yml
-    if: ${{ !cancelled() && github.ref == 'refs/heads/master' }}
+    if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     with:
         AWS_ACCOUNT: '730335646197'
         AWS_REGION: 'us-west-2'
