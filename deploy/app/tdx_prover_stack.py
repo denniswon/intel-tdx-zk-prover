@@ -352,7 +352,7 @@ class TdxProver(Stack):
             cluster=cluster,
             task_definition=task_definition,
             security_groups=[task_security_group],
-            desired_count=1,
+            desired_count=0,
             deployment_controller=ecs.DeploymentController(type=ecs.DeploymentControllerType.ECS),
             min_healthy_percent=50,
             max_healthy_percent=200,
