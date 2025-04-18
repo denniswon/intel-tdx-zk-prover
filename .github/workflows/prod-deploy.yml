@@ -27,7 +27,7 @@ jobs:
     name: CDK Diff Prod
     uses: ./.github/workflows/reusable-cdk.yml
     with:
-      AWS_ACCOUNT: '730335646197'
+      AWS_ACCOUNT: '879381238815'
       AWS_REGION: 'us-west-2'
       CDK_ACTION_TYPE: diff
       CDK_DEPLOY_ENV: prod
@@ -71,7 +71,7 @@ jobs:
     uses: ./.github/workflows/reusable-cdk.yml
     if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     with:
-      AWS_ACCOUNT: '730335646197'
+      AWS_ACCOUNT: '879381238815'
       AWS_REGION: 'us-west-2'
       CDK_ACTION_TYPE: deploy
       CDK_DEPLOY_ENV: prod
