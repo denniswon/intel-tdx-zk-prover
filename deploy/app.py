@@ -48,6 +48,7 @@ stack = TdxProver(
     ecr_repository_arn=os.getenv("OPS_ECR_REPOSITORY_ARN"),
 )
 
+## We don't need a secondary region for the Prover stack
 # ap_stack = TdxProver(
 #     app,
 #     "TdxProverAPNE2",

@@ -17,11 +17,7 @@ jobs:
     # but not publish it when dependabot runs.
     strategy:
       fail-fast: false
-      matrix:
-        python: ['3.13']
     with:
-      python: ${{ matrix.python }}
-      # Used during image builds
       aws_account: '584864542664'
       aws_region: us-west-2
       aws_role_name: github-magiclabs-role
@@ -31,30 +27,28 @@ jobs:
     name: CDK Diff Prod
     uses: ./.github/workflows/reusable-cdk.yml
     with:
-        AWS_ACCOUNT: '730335646197'
-        AWS_REGION: 'us-west-2'
-        CDK_ACTION_TYPE: diff
-        CDK_DEPLOY_ENV: prod
-        CDK_WORKING_DIR: deploy
-        CONTEXT_FLAGS: ''
-        NODE_VERSION: '22'
-        PYTHON_VERSION: '3.13'
-        ROLE_NAME: 'github-magiclabs-fridge-role'
-        USW2_ECS_CLUSTER_NAME: 'arn:aws:ecs:us-west-2:730335646197:cluster/flamingo-ecs-cluster'
-        USW2_VPC_ID: 'vpc-087584d71d4a76832'
-        APNE2_VPC_ID: 'vpc-000d8b8d7844e622c'
-        APNE2_ECS_CLUSTER_NAME: 'arn:aws:ecs:ap-northeast-2:730335646197:cluster/flamingo-ecs-cluster'
-        OPS_ECR_REPOSITORY_ARN: "arn:aws:ecr:us-west-2:584864542664:repository/fridge"
-        OPS_AWS_ACCOUNT: '584864542664'
-        USW2_DB_SECURITY_GROUP_ID: 'sg-0fda0cee679a46890'
-        APNE2_DB_SECURITY_GROUP_ID: 'sg-090c00e3328e24c26'
-        TEE_ROOT_URL: "https://tee.magiclabs.com"
-        FORTMATIC_ROOT_URL: "https://api.magic.link"
+      AWS_ACCOUNT: '730335646197'
+      AWS_REGION: 'us-west-2'
+      CDK_ACTION_TYPE: diff
+      CDK_DEPLOY_ENV: prod
+      CDK_WORKING_DIR: deploy
+      CONTEXT_FLAGS: ''
+      NODE_VERSION: '22'
+      PYTHON_VERSION: '3.13'
+      ROLE_NAME: 'github-magiclabs-cdk-deploy'
+      USW2_ECS_CLUSTER_NAME: 'arn:aws:ecs:us-west-2:879381238815:cluster/PassportIdentityUSW2-passportidentityecs41B5DFD6-p9MXkVhOxkcm'
+      USW2_VPC_ID: 'vpc-032c6a393bdecea6f'
+      APNE2_VPC_ID: 'vpc-0f31fff8eefd4a805'
+      APNE2_ECS_CLUSTER_NAME: 'arn:aws:ecs:ap-northeast-2:879381238815:cluster/PassportIdentityAPNE2-passportidentityecs41B5DFD6-eoFl3pViiicp'
+      OPS_ECR_REPOSITORY_ARN: "arn:aws:ecr:us-west-2:584864542664:repository/tdx-prover"
+      OPS_AWS_ACCOUNT: '584864542664'
+      USW2_DB_SECURITY_GROUP_ID: 'sg-0d865988b1b0a2fd4'
+      APNE2_DB_SECURITY_GROUP_ID: 'sg-0396d351bedef56d8'
     secrets: inherit
 
   merge_ready:
     name: Results
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: [publish_prod, cdk_diff_prod]
     if: |
       always() &&
@@ -77,23 +71,21 @@ jobs:
     uses: ./.github/workflows/reusable-cdk.yml
     if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
     with:
-        AWS_ACCOUNT: '730335646197'
-        AWS_REGION: 'us-west-2'
-        CDK_ACTION_TYPE: deploy
-        CDK_DEPLOY_ENV: prod
-        CDK_WORKING_DIR: deploy
-        CONTEXT_FLAGS: ''
-        NODE_VERSION: '22'
-        PYTHON_VERSION: '3.13'
-        ROLE_NAME: 'github-magiclabs-fridge-role'
-        USW2_ECS_CLUSTER_NAME: 'arn:aws:ecs:us-west-2:730335646197:cluster/flamingo-ecs-cluster'
-        USW2_VPC_ID: 'vpc-087584d71d4a76832'
-        APNE2_VPC_ID: 'vpc-000d8b8d7844e622c'
-        APNE2_ECS_CLUSTER_NAME: 'arn:aws:ecs:ap-northeast-2:730335646197:cluster/flamingo-ecs-cluster'
-        OPS_ECR_REPOSITORY_ARN: "arn:aws:ecr:us-west-2:584864542664:repository/fridge"
-        OPS_AWS_ACCOUNT: '584864542664'
-        USW2_DB_SECURITY_GROUP_ID: 'sg-0fda0cee679a46890'
-        APNE2_DB_SECURITY_GROUP_ID: 'sg-090c00e3328e24c26'
-        TEE_ROOT_URL: "https://tee.magiclabs.com"
-        FORTMATIC_ROOT_URL: "https://api.magic.link"
+      AWS_ACCOUNT: '730335646197'
+      AWS_REGION: 'us-west-2'
+      CDK_ACTION_TYPE: deploy
+      CDK_DEPLOY_ENV: prod
+      CDK_WORKING_DIR: deploy
+      CONTEXT_FLAGS: ''
+      NODE_VERSION: '22'
+      PYTHON_VERSION: '3.13'
+      ROLE_NAME: 'github-magiclabs-cdk-deploy'
+      USW2_ECS_CLUSTER_NAME: 'arn:aws:ecs:us-west-2:879381238815:cluster/PassportIdentityUSW2-passportidentityecs41B5DFD6-p9MXkVhOxkcm'
+      USW2_VPC_ID: 'vpc-032c6a393bdecea6f'
+      APNE2_VPC_ID: 'vpc-0f31fff8eefd4a805'
+      APNE2_ECS_CLUSTER_NAME: 'arn:aws:ecs:ap-northeast-2:879381238815:cluster/PassportIdentityAPNE2-passportidentityecs41B5DFD6-eoFl3pViiicp'
+      OPS_ECR_REPOSITORY_ARN: "arn:aws:ecr:us-west-2:584864542664:repository/tdx-prover"
+      OPS_AWS_ACCOUNT: '584864542664'
+      USW2_DB_SECURITY_GROUP_ID: 'sg-0d865988b1b0a2fd4'
+      APNE2_DB_SECURITY_GROUP_ID: 'sg-0396d351bedef56d8'
     secrets: inherit
