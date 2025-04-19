@@ -23,7 +23,6 @@ Dockerfile
 
 # Build artifacts
 /target
-/data
 /coverage
 
 # Dependency build files
@@ -49,7 +48,6 @@ ehthumbs.db
 *.dylib
 *.a
 
-/data
 Claude.md
 curl_command.sh
 *.sql

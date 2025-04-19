@@ -1,0 +1,21 @@
+# Cross.toml ─ place next to Cargo.toml
+[build]
+# Default target when you simply run `cross build`
+default-target = "x86_64-unknown-linux-gnu"
+
+# One‑liner APT install that runs inside the stock x86_64‑gnu image.
+# $CROSS_DEB_ARCH is expanded automatically by cross.  [oai_citation_attribution:0‡GitHub](https://github.com/cross-rs/cross/wiki/Configuration)
+pre-build = [
+
+    "dpkg --add-architecture $CROSS_DEB_ARCH",
+    "apt-get update && apt-get --assume-yes install libpq-dev:$CROSS_DEB_ARCH libssl-dev:$CROSS_DEB_ARCH pkg-config"
+]
+
+[build.env]               # forward host env vars into the container
+passthrough = [
+    "SQLX_OFFLINE",         # let sqlx use offline mode in CI if you export it
+    "DATABASE_URL"          # optional: required when sqlx migrates at compile‑time
+]
+
+[target.x86_64-unknown-linux-gnu]
+# Nothing else needed; inherits the global pre‑build step.
