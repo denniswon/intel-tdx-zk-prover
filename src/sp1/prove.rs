@@ -44,7 +44,7 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
     println!("Quote version: {}", quote_version);
     println!("TEE Type: {}", tee_type);
 
-    if quote_version < 3 || quote_version > 4 {
+    if !(3..=4).contains(&quote_version) {
         return Err(anyhow!("Unsupported quote version"));
     }
 
@@ -225,8 +225,8 @@ fn generate_input(quote: &[u8], collaterals: &[u8]) -> Vec<u8> {
     input.extend_from_slice(&current_time_bytes);
     input.extend_from_slice(&quote_len.to_le_bytes());
     input.extend_from_slice(&intel_collaterals_bytes_len.to_le_bytes());
-    input.extend_from_slice(&quote);
-    input.extend_from_slice(&collaterals);
+    input.extend_from_slice(quote);
+    input.extend_from_slice(collaterals);
 
     input.to_owned()
 }
