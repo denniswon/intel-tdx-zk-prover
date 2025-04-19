@@ -4,32 +4,53 @@
 # For more help, visit the .dockerignore file reference guide at
 # https://docs.docker.com/engine/reference/builder/#dockerignore-file
 
-**/.DS_Store
-**/.dockerignore
-**/.git
-**/.gitignore
-**/.vscode
-/target
-LICENSE
-README.md
-
-# Git
+# General
 .git
 .gitignore
+Dockerfile
+.dockerignore
 
-# Rust
-/target
-**/*.rs.bk
-Cargo.lock
-
-# IDE
-.idea
-.vscode
+# IDEs and editors
 *.swp
 *.swo
+*~
+*.bak
+*.tmp
+*.DS_Store
+.idea
+.vscode
+*.code-workspace
 
-# OS
-.DS_Store
-Thumbs.db
-Claude.md
+# Build artifacts
+/target
 /data
+/coverage
+
+# Dependency build files
+**/*.rlib
+**/*.d
+**/*.o
+**/*.crate
+
+# Test and debug output
+*.log
+*.profraw
+*.profdata
+*.dSYM/
+
+# Platform-specific
+Thumbs.db
+ehthumbs.db
+
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+
+/data
+Claude.md
+curl_command.sh
+*.sql
+!migrations/*.sql

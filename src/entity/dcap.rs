@@ -20,8 +20,6 @@ pub enum QuoteBodyType {
 
 impl DcapVerifiedOutput {
     pub fn from_output(output: VerifiedOutput) -> DcapVerifiedOutput {
-        println!("output: {:?}", output);
-        
         let quote_body_type = match output.quote_body {
             QuoteBody::SGXQuoteBody(_) => QuoteBodyType::SGXQuoteBody,
             QuoteBody::TD10QuoteBody(_) => QuoteBodyType::TD10QuoteBody

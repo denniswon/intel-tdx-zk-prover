@@ -1,8 +1,52 @@
-**/target
-.env
+# Rust build output
+/target/
+**/target/
+
+# Generated documentation
+/target/doc/
+
+# Binaries
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Executables and debugging
+*.rlib
+*.rmeta
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*.bak
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# By-products of tests or scripts
+*.out
+*.tmp
+
+# Miscellaneous
+*.crate
+.cargo/
+
+# Coverage and fuzzing tools
+coverage/
+fuzz/target/
+*.profraw
+
 !.sqlx
-**/docker
-cert.pem
-key.pem
-Claude.md
 *.sql
+!migrations/*.sql
+
+curl_command.sh
+Cross.toml
+Claude.md
+.env
