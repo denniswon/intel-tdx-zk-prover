@@ -113,11 +113,11 @@ class TdxProver(Stack):
             f"{APP_SHORTNAME}-tg",
             target_group_name=f"{APP_SHORTNAME}-tg",
             vpc=vpc,
-            port=8000,
+            port=80,
             protocol=elbv2.ApplicationProtocol.HTTP,
             target_type=elbv2.TargetType.IP,
             health_check=elbv2.HealthCheck(
-                path="/health",
+                path="/",
                 healthy_threshold_count=2,
                 unhealthy_threshold_count=2,
                 timeout=cdk.Duration.seconds(2),
