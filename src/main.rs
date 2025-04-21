@@ -1,6 +1,5 @@
-use std::{env, sync::Arc, time::Duration, time::Instant};
+use std::sync::Arc;
 
-use alloy::transports::http::reqwest;
 use aws_config::BehaviorVersion;
 use aws_lambda_events::eventbridge::EventBridgeEvent;
 use aws_sdk_eventbridge as eventbridge;
@@ -28,23 +27,13 @@ mod service;
 mod sp1;
 mod state;
 
-struct HandlerConfig {
-    url: reqwest::Url,
-    client: reqwest::Client,
-}
-
 async fn handler(
-    _config: &HandlerConfig,
-    event: LambdaEvent<EventBridgeEvent<Value>>,
+    lambda_event: LambdaEvent<EventBridgeEvent<Value>>,
 ) -> Result<Value, Error> {
-    let start = Instant::now();
-    let _duration = start.elapsed();
-
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
-
     let client = aws_sdk_eventbridge::Client::new(&config);
 
-    let request_id = event.payload.detail["request_id"].as_str().unwrap();
+    let request_id = lambda_event.payload.detail["request_id"].as_str().unwrap();
     let event = format!(
         r#"
     {{
@@ -52,13 +41,14 @@ async fn handler(
     }}"#
     );
 
-    println!("Event: {}", event);
+    println!("PutEvent: {}", event);
+    println!("LambdaEvent: {:#?}", lambda_event);
 
     let input = PutEventsRequestEntry::builder()
         .detail(event)
-        .detail_type("tdx-prover-type".to_string())
-        .event_bus_name("tdx-prover-bus".to_string())
-        .source("tdx-prover-source".to_string())
+        .detail_type("tdx_quote".to_string())
+        .event_bus_name("tdx-prover".to_string())
+        .source("com.magic.newton".to_string())
         .build();
 
     match client.put_events().entries(input).send().await {
@@ -90,20 +80,8 @@ async fn main() -> Result<(), Error> {
 
     match lambda.as_str() {
         "true" => {
-            let timeout = env::var("TIMEOUT").unwrap_or_else(|_| "60".to_string());
-            let timeout = timeout
-                .parse::<u64>()
-                .expect("TIMEOUT environment variable is not a valid number");
-            let client = reqwest::Client::builder()
-                .timeout(Duration::from_secs(timeout))
-                .build()?;
-
-            let config = &HandlerConfig {
-                url: reqwest::Url::parse(&parameter::get("DATABASE_URL")).unwrap(),
-                client: reqwest::Client::new(),
-            };
             lambda_runtime::run(service_fn(move |event| async move {
-                handler(config, event).await
+                handler(event).await
             }))
             .await
         }
