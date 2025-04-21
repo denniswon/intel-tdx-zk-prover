@@ -45,7 +45,6 @@ This project uses Axum framework and SQLx for DB access layer for storing agent,
 
 - POST `/attestation/register` - Register a new attestation
 - GET `/attestation/{id}` - Get attestation by id
-- GET `/attestation/verify_dcap_qvl/{id}` - Verify attestation with QVL
 - GET `/attestation/verify_dcap/{id}` - Verify attestation with DCAP
 
 - GET `/attestation/prove/{id}` - Generate zero knowledge proof of attestation

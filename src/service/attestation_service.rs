@@ -12,10 +12,6 @@ use dcap_rs::types::VerifiedOutput;
 use sqlx::Error as SqlxError;
 use std::sync::Arc;
 
-
-use dcap_qvl::collateral::get_collateral_from_pcs;
-use dcap_qvl::verify::{verify as verify_quote, VerifiedReport};
-
 use dcap_rs::types::quotes::version_3::QuoteV3;
 use dcap_rs::types::collaterals::IntelCollateral;
 
@@ -80,19 +76,6 @@ impl AttestationService {
         .fetch_one(self.db_conn.get_pool())
         .await?;
         Ok(attestation)
-    }
-
-    // Verify using Intel attestation pcs. Only supports dcapv3
-    pub async fn verify_dcap_qvl(&self, attestation: Attestation) -> Result<VerifiedReport, AttestationError> {
-        match attestation.attestation_type {
-            AttestationType::DcapV3 => {
-                let quote = attestation.attestation_data;
-                let collateral = get_collateral_from_pcs(&quote, std::time::Duration::from_secs(10)).await.expect("failed to get collateral");
-                let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_secs();
-                Ok(verify_quote(&quote, &collateral, now).expect("failed to verify quote"))
-            },
-            _ => Err(AttestationError::Invalid),
-        }
     }
 
     // Verify using onchain pccs collateral
