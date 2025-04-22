@@ -40,57 +40,6 @@ class TdxProver(Stack):
         cdk.Tags.of(self).add("project", app_shortname)
         cdk.Tags.of(self).add("stack", f"{app_shortname}-stack")
 
-        if aws_region == PRIMARY_REGION:
-            # Get the GitHub OIDC provider
-            github_oidc_provider = iam.OpenIdConnectProvider.from_open_id_connect_provider_arn(
-                self,
-                "GitHubOIDCProvider",
-                open_id_connect_provider_arn=f"arn:aws:iam::{self.account}:oidc-provider/token.actions.githubusercontent.com",
-            )
-
-            # Create role for tdx-prover repository
-            role = iam.Role(
-                self,
-                "GithubRole-tdx-prover",
-                role_name="github-magiclabs-tdx-prover-role",
-                assumed_by=iam.WebIdentityPrincipal(
-                    github_oidc_provider.open_id_connect_provider_arn,
-                    conditions={
-                        "StringEquals": {
-                            "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
-                        },
-                        "StringLike": {
-                            "token.actions.githubusercontent.com:sub": "repo:magiclabs/tdx-prover:*"
-                        },
-                    },
-                ),
-            )
-
-            # Create a managed policy with the desired name
-            cdk_deploy_policy = iam.ManagedPolicy(
-                self,
-                "CDKDeployPolicy",
-                managed_policy_name="CDKDeployPolicy",
-                statements=[
-                    iam.PolicyStatement(
-                        effect=iam.Effect.ALLOW,
-                        actions=["sts:AssumeRole"],
-                        resources=[
-                            f"arn:aws:iam::{self.account}:role/cdk-hnb659fds-deploy-role-{self.account}-us-west-2",
-                            f"arn:aws:iam::{self.account}:role/cdk-hnb659fds-file-publishing-role-{self.account}-us-west-2",
-                            f"arn:aws:iam::{self.account}:role/cdk-hnb659fds-image-publishing-role-{self.account}-us-west-2",
-                            f"arn:aws:iam::{self.account}:role/cdk-hnb659fds-lookup-role-{self.account}-us-west-2",
-                            f"arn:aws:iam::{self.account}:role/cdk-hnb659fds-deploy-role-{self.account}-ap-northeast-2",
-                            f"arn:aws:iam::{self.account}:role/cdk-hnb659fds-file-publishing-role-{self.account}-ap-northeast-2",
-                            f"arn:aws:iam::{self.account}:role/cdk-hnb659fds-image-publishing-role-{self.account}-ap-northeast-2",
-                            f"arn:aws:iam::{self.account}:role/cdk-hnb659fds-lookup-role-{self.account}-ap-northeast-2",
-                        ],
-                    )
-                ],
-            )
-
-            role.add_managed_policy(cdk_deploy_policy)
-
         vpc = ec2.Vpc.from_lookup(self, "ExistingVPC", vpc_id=vpc_id)
 
         # Use the passport-identity ecs clusters
@@ -113,11 +62,11 @@ class TdxProver(Stack):
             f"{APP_SHORTNAME}-tg",
             target_group_name=f"{APP_SHORTNAME}-tg",
             vpc=vpc,
-            port=80,
+            port=8002,
             protocol=elbv2.ApplicationProtocol.HTTP,
             target_type=elbv2.TargetType.IP,
             health_check=elbv2.HealthCheck(
-                path="/",
+                path="/api/health",
                 healthy_threshold_count=2,
                 unhealthy_threshold_count=2,
                 timeout=cdk.Duration.seconds(2),

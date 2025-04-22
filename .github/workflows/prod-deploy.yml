@@ -8,6 +8,10 @@ permissions:
   id-token: write # This is required for aws creds requesting the JWT
   contents: read  # This is required for aws creds actions/checkout
 
+concurrency:
+  cancel-in-progress: true
+  group: 'prod-deploy-${{ github.event.workflow_run.head_branch }}'
+
 jobs:
   publish_prod:
     name: Publish Prod
