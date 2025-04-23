@@ -5,7 +5,6 @@ import aws_cdk as cdk
 from aws_cdk import Tags
 from dotenv import load_dotenv
 
-from app.ecr_repository_stack import TdxProverEcrStack
 from app.tdx_prover_stack import TdxProver
 
 # Determine the .env file based on the AWS_DEPLOY_ENV environment variable
@@ -44,7 +43,6 @@ stack = TdxProver(
     db_security_group_id=os.getenv("USW2_DB_SECURITY_GROUP_ID"),
     vpc_id=os.getenv("USW2_VPC_ID"),
     env=cdk.Environment(account=os.getenv("AWS_ACCOUNT"), region="us-west-2"),
-    ecr_repository_arn=os.getenv("OPS_ECR_REPOSITORY_ARN"),
     event_bus_arn=os.getenv("OPS_EVENT_BUS_ARN"),
 )
 
@@ -60,23 +58,10 @@ stack = TdxProver(
 #     db_security_group_id=os.getenv("APNE2_DB_SECURITY_GROUP_ID"),
 #     vpc_id=os.getenv("APNE2_VPC_ID"),
 #     env=cdk.Environment(account=os.getenv("AWS_ACCOUNT"), region="ap-northeast-2"),
-#     ecr_repository_arn=os.getenv("OPS_ECR_REPOSITORY_ARN"),
 #     event_bus_arn=os.getenv("OPS_EVENT_BUS_ARN"),
-# )
-
-# ecr_stack = TdxProverEcrStack(
-#     app,
-#     "tdxProverEcrStack",
-#     env=cdk.Environment(account=os.getenv("OPS_AWS_ACCOUNT"), region="us-west-2"),
 # )
 
 for key, value in tags.items():
     Tags.of(stack).add(key, value)
-
-# for key, value in tags.items():
-#     Tags.of(ap_stack).add(key, value)
-
-# for key, value in tags.items():
-#     Tags.of(ecr_stack).add(key, value)
 
 app.synth()

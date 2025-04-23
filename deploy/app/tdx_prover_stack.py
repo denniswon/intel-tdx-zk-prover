@@ -27,7 +27,6 @@ class TdxProver(Stack):
         long_git_commit: str,
         vpc_id: str,
         aws_region: str,
-        ecr_repository_arn: str,
         event_bus_arn: str,
         **kwargs,
     ) -> None:
@@ -42,61 +41,6 @@ class TdxProver(Stack):
         cdk.Tags.of(self).add("stack", f"{app_shortname}-stack")
 
         vpc = ec2.Vpc.from_lookup(self, "ExistingVPC", vpc_id=vpc_id)
-
-        # Create a load balancer
-        lb = elbv2.ApplicationLoadBalancer(
-            self,
-            f"{APP_SHORTNAME}-lb",
-            vpc=vpc,
-            internet_facing=True,
-            load_balancer_name=f"{APP_SHORTNAME}-lb",
-        )
-
-        # Create a target group
-        target_group = elbv2.ApplicationTargetGroup(
-            self,
-            f"{APP_SHORTNAME}-tg",
-            target_group_name=f"{APP_SHORTNAME}-tg",
-            vpc=vpc,
-            port=8002,
-            protocol=elbv2.ApplicationProtocol.HTTP,
-            target_type=elbv2.TargetType.IP,
-            health_check=elbv2.HealthCheck(
-                path="/api/health",
-                healthy_threshold_count=2,
-                unhealthy_threshold_count=2,
-                timeout=cdk.Duration.seconds(2),
-                interval=cdk.Duration.seconds(5),
-                healthy_http_codes="200",
-            ),
-        )
-
-        # Create a SSL certificate
-        certificate = acm.Certificate(
-            self,
-            "SiteCertificate",
-            domain_name=f"{APP_SHORTNAME}.{deploy_env}-{SHORT_REGION}.{DOMAIN_NAME}",
-            validation=acm.CertificateValidation.from_dns(),
-        )
-
-        # Create a listener
-        lb.add_listener(f"{APP_SHORTNAME}-listener", port=80, default_target_groups=[target_group])
-
-        # Create HTTPS listener
-        elbv2.ApplicationListener(
-            self,
-            f"{APP_SHORTNAME}_HttpsListener",
-            load_balancer=lb,
-            port=443,
-            protocol=elbv2.ApplicationProtocol.HTTPS,
-            certificates=[elbv2.ListenerCertificate.from_certificate_manager(certificate)],
-            default_target_groups=[target_group],
-        )
-
-        # Reference the ECR repository in another account
-        ecr_repo = ecr.Repository.from_repository_arn(
-            self, "TdxProverEcrRepo", repository_arn=ecr_repository_arn
-        )
 
         # Create a secret for service secrets seeded with key/value array for datadog
         self.service_secrets = secretsmanager.Secret(
