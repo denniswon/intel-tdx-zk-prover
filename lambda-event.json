@@ -1,13 +1,13 @@
 {
   "version": "0",
   "id": "4b48e319-3c2d-0cec-05fb-145fd206b7ce",
-  "detail-type": "tdx_quote",
+  "detail-type": "tdx-quote",
   "source": "com.magic.newton",
   "account": "641838893963",
   "time": "2025-04-22T22:11:06Z",
   "region": "us-east-2",
   "resources": [],
   "detail": {
-    "request_id": "1"
+    "request_id": "b3de4798-c8ee-4024-9996-c368313ccc4f"
   }
 }

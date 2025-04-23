@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 use crate::entity::quote::{TdxQuote, TdxQuoteStatus};
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use sqlx::types::Uuid;
 use validator::Validate;
 
@@ -9,8 +9,8 @@ pub struct QuoteDto {
     pub id: Uuid,
     pub onchain_request_id: Uuid,
     pub quote: Vec<u8>,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
     pub status: TdxQuoteStatus,
 }
 
@@ -19,8 +19,8 @@ pub struct QuoteReadDto {
     pub id: Uuid,
     pub onchain_request_id: Uuid,
     pub quote: Vec<u8>,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
     pub status: TdxQuoteStatus,
 }
 

@@ -63,13 +63,16 @@ impl QuoteRepositoryTrait for QuoteRepository {
             quote,
             created_at as "created_at: _",
             updated_at as "updated_at: _",
-            status as "status: _"
-            FROM tdx_quote WHERE id = $1"#,
+            status as "status: crate::entity::quote::TdxQuoteStatus"
+            FROM tdx_quote WHERE onchain_request_id = $1"#,
             id,
         )
         .fetch_one(self.db_conn.get_pool())
         .await
-        .map_err(|_| DbError::SomethingWentWrong("Failed to fetch quote".to_string()))?;
+        .map_err(|e| {
+            println!("Failed to fetch quote: {}", e);
+            DbError::SomethingWentWrong("Failed to fetch quote".to_string())
+        })?;
         return Ok(quote);
     }
 }

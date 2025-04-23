@@ -38,22 +38,17 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
     let state = AttestationState::new(&db_conn);
 
     let attestation = state.quote_repo.find(request_id).await;
-
     let result = match attestation {
         Ok(attestation) => {
-            tracing::info!(
-                "Attestation found for request ID: {} {:?}",
-                request_id,
-                attestation
-            );
-            let proof = prove::prove(attestation.quote, None).await;
+            tracing::info!("Attestation found for request ID: {} {}", request_id, attestation.status);
+            let proof = prove::prove(attestation.quote.clone(), None).await;
             match proof {
                 Ok(proof) => {
                     tracing::info!("Proof generated for request ID: {}", request_id);
                     Ok(proof)
                 }
-                _ => {
-                    tracing::error!("Failed to generate proof for request ID: {}", request_id);
+                Err(e) => {
+                    tracing::error!("Failed to generate proof for request ID: {} {}", request_id, e.to_string());
                     Err(Box::new(AttestationError::Invalid))
                 }
             }

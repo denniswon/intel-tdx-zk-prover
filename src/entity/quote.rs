@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::types::Uuid;
 
@@ -10,8 +10,8 @@ pub struct TdxQuote {
     pub onchain_request_id: Uuid,
     pub status: TdxQuoteStatus,
     pub quote: Vec<u8>,
-    pub created_at: NaiveDateTime,
-    pub updated_at: NaiveDateTime,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 #[derive(strum_macros::Display, Debug, Clone, Copy, sqlx::Type, Deserialize, Serialize)]

@@ -43,11 +43,11 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
     tracing::debug!("TEE Type: {}", tee_type);
 
     if !(3..=4).contains(&quote_version) {
-        return Err(anyhow!("Unsupported quote version"));
+        return Err(anyhow!("Unsupported quote version {}", quote_version));
     }
 
     if tee_type != SGX_TEE_TYPE && tee_type != TDX_TEE_TYPE {
-        return Err(anyhow!("Unsupported tee type"));
+        return Err(anyhow!("Unsupported tee type {}", tee_type));
     }
 
     tracing::debug!("Quote read successfully. Begin fetching collaterals from the on-chain PCCS");
