@@ -1,8 +1,6 @@
 #![allow(dead_code)]
 
-use crate::sp1::chain::attestation::{
-    decode_attestation_ret_data, generate_attestation_calldata,
-};
+use crate::sp1::chain::attestation::{decode_attestation_ret_data, generate_attestation_calldata};
 use crate::sp1::chain::pccs::enclave_id::{get_enclave_identity, EnclaveIdType};
 use crate::sp1::chain::pccs::fmspc_tcb::get_tcb_info;
 use crate::sp1::chain::pccs::pcs::get_certificate_by_id;
@@ -62,31 +60,19 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
         println!("Fetched Intel SGX RootCA and CRL");
     }
 
-    let (fmspc, pck_type, pck_issuer) =
-        get_pck_fmspc_and_issuer(&quote, quote_version, tee_type);
+    let (fmspc, pck_type, pck_issuer) = get_pck_fmspc_and_issuer(&quote, quote_version, tee_type);
 
-    let tcb_type: u8;
-    if tee_type == TDX_TEE_TYPE {
-        tcb_type = 1;
-    } else {
-        tcb_type = 0;
-    }
-    let tcb_version: u32;
-    if quote_version < 4 {
-        tcb_version = 2
-    } else {
-        tcb_version = 3
-    }
+    let tcb_type: u8 = if tee_type == TDX_TEE_TYPE { 1 } else { 0 };
+    let tcb_version: u32 = if quote_version < 4 { 2 } else { 3 };
     let tcb_info = get_tcb_info(tcb_type, fmspc.as_str(), tcb_version).await?;
 
     println!("Fetched TCBInfo JSON for FMSPC: {}", fmspc);
 
-    let qe_id_type: EnclaveIdType;
-    if tee_type == TDX_TEE_TYPE {
-        qe_id_type = EnclaveIdType::TDQE
+    let qe_id_type: EnclaveIdType = if tee_type == TDX_TEE_TYPE {
+        EnclaveIdType::TDQE
     } else {
-        qe_id_type = EnclaveIdType::QE
-    }
+        EnclaveIdType::QE
+    };
     let qe_identity = get_enclave_identity(qe_id_type, quote_version as u32).await?;
     println!("Fetched QEIdentity JSON");
 
@@ -157,22 +143,23 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
     output.extend_from_slice(&ret_slice[2..2 + output_len]);
 
     println!("Execution Output: {}", hex::encode(ret_slice));
-    println!("Proof pub value: {}", hex::encode(proof.public_values.as_slice()));
+    println!(
+        "Proof pub value: {}",
+        hex::encode(proof.public_values.as_slice())
+    );
     println!("VK: {}", vk.bytes32().to_string().as_str());
     println!("Proof: {}", hex::encode(proof.bytes()));
 
-    Ok(DcapProof {
-        output,
-        vk,
-        proof,
-    })
+    Ok(DcapProof { output, vk, proof })
 }
 
 pub async fn verify_proof(proof: DcapProof) -> Result<VerifiedOutput> {
     // Verify proof
     let client = ProverClient::from_env();
 
-    client.verify(&proof.proof, &proof.vk).expect("Failed to verify proof");
+    client
+        .verify(&proof.proof, &proof.vk)
+        .expect("Failed to verify proof");
     println!("Successfully verified proof.");
 
     let parsed_output = VerifiedOutput::from_bytes(&proof.output);
@@ -186,13 +173,12 @@ pub async fn submit_proof(proof: DcapProof) -> Result<(bool, Vec<u8>)> {
     let calldata = generate_attestation_calldata(&proof.output, &proof.proof.bytes());
     println!("Calldata: {}", hex::encode(&calldata));
 
-    let tx_sender = TxSender::new(DEFAULT_RPC_URL, DEFAULT_DCAP_CONTRACT)
-        .expect("Failed to create txSender");
+    let tx_sender =
+        TxSender::new(DEFAULT_RPC_URL, DEFAULT_DCAP_CONTRACT).expect("Failed to create txSender");
 
     // staticcall to the DCAP verifier contract to verify proof
     let call_output = (tx_sender.call(calldata.clone()).await?).to_vec();
-    let (chain_verified, chain_raw_verified_output) =
-        decode_attestation_ret_data(call_output);
+    let (chain_verified, chain_raw_verified_output) = decode_attestation_ret_data(call_output);
 
     if chain_verified && proof.output == chain_raw_verified_output {
         println!("On-chain verification succeed.");

@@ -8,8 +8,8 @@ use crate::response::api_response::ApiSuccessResponse;
 use crate::sp1::prove::DcapProof;
 use crate::state::attestation_state::AttestationState;
 use axum::{
-    Json,
     extract::{Extension, Path, State},
+    Json,
 };
 
 pub async fn get(
@@ -47,7 +47,7 @@ pub async fn verify_dcap(
     State(state): State<AttestationState>,
     Path(id): Path<i32>,
 ) -> Result<Json<DcapVerifiedOutput>, ApiError> {
-    let attestation: Result<Attestation , DbError> =
+    let attestation: Result<Attestation, DbError> =
         state.attestation_repo.find(id.try_into().unwrap()).await;
     match attestation {
         Ok(attestation) => {
@@ -56,7 +56,7 @@ pub async fn verify_dcap(
                 Ok(tcb) => Ok(Json(DcapVerifiedOutput::from_output(tcb))),
                 Err(e) => Err(ApiError::AttestationError(e)),
             }
-        },
+        }
         Err(e) => Err(ApiError::DbError(e)),
     }
 }
@@ -65,10 +65,7 @@ pub async fn prove(
     State(state): State<AttestationState>,
     Path(id): Path<i32>,
 ) -> Result<Json<DcapProof>, ApiError> {
-    let proof = state
-        .attestation_service
-        .prove(id.try_into().unwrap())
-        .await;
+    let proof = state.attestation_service.prove(id).await;
     match proof {
         Ok(proof) => Ok(Json(proof)),
         Err(e) => Err(ApiError::AttestationError(e)),
@@ -79,10 +76,7 @@ pub async fn verify(
     State(state): State<AttestationState>,
     ValidatedRequest(payload): ValidatedRequest<DcapProof>,
 ) -> Result<Json<DcapVerifiedOutput>, ApiError> {
-    let output = state
-        .attestation_service
-        .verify(payload)
-        .await;
+    let output = state.attestation_service.verify(payload).await;
     match output {
         Ok(output) => Ok(Json(DcapVerifiedOutput::from_output(output))),
         Err(e) => Err(ApiError::AttestationError(e)),
@@ -93,10 +87,7 @@ pub async fn submit_proof(
     State(state): State<AttestationState>,
     ValidatedRequest(payload): ValidatedRequest<DcapProof>,
 ) -> Result<Json<DcapVerifiedOutput>, ApiError> {
-    let output = state
-        .attestation_service
-        .submit_proof(payload)
-        .await;
+    let output = state.attestation_service.submit_proof(payload).await;
     match output {
         Ok(output) => Ok(Json(DcapVerifiedOutput::from_output(output))),
         Err(e) => Err(ApiError::AttestationError(e)),

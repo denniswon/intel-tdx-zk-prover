@@ -3,7 +3,7 @@ use std::sync::Arc;
 use aws_lambda_events::eventbridge::EventBridgeEvent;
 use lambda_runtime::{LambdaEvent, Error};
 use crate::{
-    config::{database::{Database, DatabaseTrait}, parameter}, error::attestation_error::AttestationError, repository::attestation_repository::AttestationRepositoryTrait, sp1::prove::{self, submit_proof, DcapProof}, state::attestation_state::AttestationState
+    config::{database::{Database, DatabaseTrait}, parameter}, error::attestation_error::AttestationError, repository::attestation_repository::AttestationRepositoryTrait, sp1::prove::{self, submit_proof}, state::attestation_state::AttestationState
 };
 use tracing::Level;
 
@@ -19,7 +19,7 @@ pub(crate)async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), E
 
     let request_id = payload.detail.get("request_id").unwrap();
     tracing::info!("Request ID: {}", request_id);
-    let request_id = request_id.as_u64().unwrap_or_else(|| 1u64);
+    let request_id = request_id.as_u64().unwrap_or(1u64);
 
     let db_conn = Arc::new(Database::init()
         .await

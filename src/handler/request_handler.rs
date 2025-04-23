@@ -39,6 +39,6 @@ pub async fn delete(
     State(state): State<RequestState>,
     Path(id): Path<i32>,
 ) -> Result<Json<RequestReadDto>, ApiError> {
-    let request = state.request_service.delete(id.try_into().unwrap()).await?;
+    let request = state.request_service.delete(id).await?;
     Ok(Json(request))
 }

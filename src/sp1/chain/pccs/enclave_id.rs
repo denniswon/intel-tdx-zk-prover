@@ -24,6 +24,7 @@ sol! {
 }
 
 #[derive(Debug)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum EnclaveIdType {
     QE,
     QVE,
@@ -39,12 +40,11 @@ pub async fn get_enclave_identity(id: EnclaveIdType, version: u32) -> Result<Vec
         &provider,
     );
 
-    let enclave_id_type_uint256;
-    match id {
-        EnclaveIdType::QE => enclave_id_type_uint256 = U256::from(0),
-        EnclaveIdType::QVE => enclave_id_type_uint256 = U256::from(1),
-        EnclaveIdType::TDQE => enclave_id_type_uint256 = U256::from(2),
-    }
+    let enclave_id_type_uint256 = match id {
+        EnclaveIdType::QE => U256::from(0),
+        EnclaveIdType::QVE => U256::from(1),
+        EnclaveIdType::TDQE => U256::from(2),
+    };
 
     let call_builder =
         enclave_id_dao_contract.getEnclaveIdentity(enclave_id_type_uint256, U256::from(version));
