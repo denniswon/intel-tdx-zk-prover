@@ -111,15 +111,6 @@ class TdxProver(Stack):
             ),
         )
 
-        # Create a security group for ECS task
-        task_security_group = ec2.SecurityGroup(
-            self,
-            f"{APP_SHORTNAME}TaskSecurityGroup",
-            security_group_name=f"{APP_SHORTNAME}-task-sg",
-            vpc=vpc,
-            description=f"Security group for {APP_SHORTNAME} ECS task",
-        )
-
         # Create a security group for the database
         db_security_group = ec2.SecurityGroup(
             self,
@@ -129,24 +120,12 @@ class TdxProver(Stack):
             allow_all_outbound=True,
             security_group_name=f"tdx-prover-{aws_region}-db-sg",
         )
-        db_security_group.add_ingress_rule(
-            peer=ec2.Peer.security_group_id(task_security_group.security_group_id),
-            connection=ec2.Port.tcp(5432),
-            description=f"tdx-prover {aws_region}: Allow inbound traffic on port 5432 from ECS tasks",  # noqa: E501
-        )
 
         # Look up existing db security
         existing_db_security_group = ec2.SecurityGroup.from_security_group_id(
             self,
             "ExistingDbSecurityGroup",
             db_security_group_id,
-        )
-
-        # Add an ingress rule to the existing security group
-        existing_db_security_group.add_ingress_rule(
-            peer=ec2.Peer.security_group_id(task_security_group.security_group_id),
-            connection=ec2.Port.tcp(5432),
-            description=f"tdx-prover {aws_region}: Allow inbound traffic on port 5432 from ECS tasks",  # noqa: E501
         )
 
         # Create a security group for the Lambda function
@@ -166,6 +145,22 @@ class TdxProver(Stack):
             description=f"Allow PostgreSQL access from {APP_SHORTNAME} Lambda function",
         )
 
+        # Add an ingress rule to the existing security group
+        existing_db_security_group.add_ingress_rule(
+            peer=ec2.Peer.security_group_id(lambda_security_group.security_group_id),
+            connection=ec2.Port.tcp(5432),
+            description=f"Allow PostgreSQL access from {APP_SHORTNAME} Lambda function",
+        )
+
+        # Create a CloudWatch logs group for the Lambda function
+        log_group = logs.LogGroup(
+            self,
+            f"{APP_SHORTNAME}-lambda-logs",
+            log_group_name=f"/aws/lambda/{APP_SHORTNAME}-rust-lambda",
+            retention=logs.RetentionDays.ONE_MONTH,
+            removal_policy=cdk.RemovalPolicy.DESTROY,
+        )
+
         # Create Rust Lambda Function for Tdx Prover
         # Note: This Lambda function expects the Rust binary to be built using cargo-lambda:
         # 1. Install cargo-lambda: cargo install cargo-lambda
@@ -175,15 +170,19 @@ class TdxProver(Stack):
             self,
             f"{APP_SHORTNAME}-rust-lambda",
             function_name=f"{APP_SHORTNAME}-rust-lambda",
-            runtime=_lambda.Runtime.PROVIDED_AL2,
+            runtime=_lambda.Runtime.PROVIDED_AL2023,
             handler="bootstrap",
             code=_lambda.Code.from_asset("../target/lambda/tdx-prover/bootstrap.zip"),
             environment={
                 "LAMBDA": "true",
                 "DATABASE_URL": self.service_secrets.secret_value_from_json("DATABASE_URL").unsafe_unwrap(),
+                "RUST_BACKTRACE": "1",  # Enable backtraces for better debugging
             },
             vpc=vpc,
             security_groups=[lambda_security_group],
+            log_group=log_group,
+            memory_size=512,  # Increased memory for better performance
+            timeout=Duration.seconds(30),  # Increased timeout for processing
         )
 
         # Grant the Lambda function permission to read the secrets
@@ -218,13 +217,6 @@ class TdxProver(Stack):
             action="lambda:InvokeFunction",
             source_arn=rule.rule_arn
         )
-        
-        # Add iam permissions for rust lambda execution to newton-ops event bus
-        rust_lambda.add_to_role_policy(
-            iam.PolicyStatement(
-                actions=["events:PutEvents"],
-                resources=["*"],
-            )
-        )
+
 
 
