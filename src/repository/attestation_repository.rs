@@ -1,8 +1,6 @@
 use crate::config::database::{Database, DatabaseTrait};
 use crate::entity::attestation::{Attestation, AttestationType, VerificationStatus};
-use crate::entity::quote::Quote;
 use async_trait::async_trait;
-use sqlx::types::Uuid;
 use crate::error::db_error::DbError;
 use std::sync::Arc;
 
@@ -29,7 +27,6 @@ pub trait AttestationRepositoryTrait {
         verification_status: Option<VerificationStatus>
     ) -> Vec<Attestation>;
     async fn find(&self, id: u64) -> Result<Attestation, DbError>;
-    async fn find_quote(&self, id: Uuid) -> Result<Attestation, DbError>;
 }
 
 #[async_trait]
@@ -144,23 +141,5 @@ impl AttestationRepositoryTrait for AttestationRepository {
         .await
         .map_err(|_| DbError::SomethingWentWrong("Failed to fetch attestation".to_string()))?;
         return Ok(attestation);
-    }
-
-    async fn find_quote(&self, id: Uuid) -> Result<Quote, DbError> {
-        let quote = sqlx::query_as!(
-            Quote,
-            r#"SELECT
-            id,
-            onchain_request_id,
-            quote,
-            created_at as "created_at: _",
-            updated_at as "updated_at: _",
-            FROM tdx_quote WHERE id = $1"#,
-            id,
-        )
-        .fetch_one(self.db_conn.get_pool())
-        .await
-        .map_err(|_| DbError::SomethingWentWrong("Failed to fetch attestation".to_string()))?;
-        return Ok(quote);
     }
 }
