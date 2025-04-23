@@ -42,10 +42,10 @@ stack = TdxProver(
     git_commit=git_commit,
     long_git_commit=long_git_commit,
     db_security_group_id=os.getenv("USW2_DB_SECURITY_GROUP_ID"),
-    ecs_cluster=os.getenv("USW2_ECS_CLUSTER_NAME"),
     vpc_id=os.getenv("USW2_VPC_ID"),
     env=cdk.Environment(account=os.getenv("AWS_ACCOUNT"), region="us-west-2"),
     ecr_repository_arn=os.getenv("OPS_ECR_REPOSITORY_ARN"),
+    event_bus_arn=os.getenv("OPS_EVENT_BUS_ARN"),
 )
 
 ## We don't need a secondary region for the Prover stack
@@ -58,10 +58,10 @@ stack = TdxProver(
 #     git_commit=git_commit,
 #     long_git_commit=long_git_commit,
 #     db_security_group_id=os.getenv("APNE2_DB_SECURITY_GROUP_ID"),
-#     ecs_cluster=os.getenv("APNE2_ECS_CLUSTER_NAME"),
 #     vpc_id=os.getenv("APNE2_VPC_ID"),
 #     env=cdk.Environment(account=os.getenv("AWS_ACCOUNT"), region="ap-northeast-2"),
 #     ecr_repository_arn=os.getenv("OPS_ECR_REPOSITORY_ARN"),
+#     event_bus_arn=os.getenv("OPS_EVENT_BUS_ARN"),
 # )
 
 # ecr_stack = TdxProverEcrStack(

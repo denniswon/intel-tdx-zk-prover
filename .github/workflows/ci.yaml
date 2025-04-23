@@ -14,24 +14,14 @@ concurrency:
   group: 'ci-${{ github.event.workflow_run.head_branch }}'
 
 jobs:
-  publish_stagef:
-    name: Publish Stagef
-    uses: ./.github/workflows/publish.yml
-    # We need to review this,
-    # because we should validate the build,
-    # but not publish it when dependabot runs.
-    if: ${{ github.actor != 'dependabot[bot]' }}
-    strategy:
-      fail-fast: false
-    with:
-      # Used during image builds
-      aws_account: '584864542664'
-      aws_region: us-west-2
-      aws_role_name: github-magiclabs-role
+  build_rust_lambda:
+    name: Build Rust Lambda
+    uses: ./.github/workflows/build-rust-lambda.yml
     secrets: inherit
 
   cdk_diff_stagef:
     name: CDK Diff Magic 2.0 StageF
+    needs: [build_rust_lambda]
     uses: ./.github/workflows/reusable-cdk.yml
     with:
         AWS_ACCOUNT: '637423541619'
@@ -51,11 +41,13 @@ jobs:
         OPS_AWS_ACCOUNT: '584864542664'
         USW2_DB_SECURITY_GROUP_ID: 'sg-0f8ac15b269bcfb56'
         APNE2_DB_SECURITY_GROUP_ID: 'sg-001edfae64f86ad35'
+        OPS_EVENT_BUS_ARN: 'arn:aws:events:us-west-2:637423541619:event-bus/tdx-prover-bus'
+        LAMBDA_ZIP_PATH: ${{ needs.build_rust_lambda.outputs.lambda_zip_path }}
     secrets: inherit
 
   cdk_deploy_stagef:
       name: CDK Deploy Magic 2.0 StageF
-      needs: [cdk_diff_stagef]
+      needs: [cdk_diff_stagef, build_rust_lambda]
       ## if: github.ref == 'refs/heads/main' ## Commenting out to get cycles on Stagef
       uses: ./.github/workflows/reusable-cdk.yml
       with:
@@ -76,11 +68,13 @@ jobs:
         OPS_AWS_ACCOUNT: '584864542664'
         USW2_DB_SECURITY_GROUP_ID: 'sg-0f8ac15b269bcfb56'
         APNE2_DB_SECURITY_GROUP_ID: 'sg-001edfae64f86ad35'
+        OPS_EVENT_BUS_ARN: 'arn:aws:events:us-west-2:637423541619:event-bus/tdx-prover-bus'
+        LAMBDA_ZIP_PATH: ${{ needs.build_rust_lambda.outputs.lambda_zip_path }}
       secrets: inherit
 
   cdk_deploy_prod:
       name: CDK Deploy prod
-      needs: [cdk_deploy_stagef]
+      needs: [cdk_deploy_stagef, build_rust_lambda]
       uses: ./.github/workflows/reusable-cdk.yml
       if: ${{ !cancelled() && github.ref == 'refs/heads/main' }}
       with:
@@ -101,4 +95,6 @@ jobs:
           OPS_AWS_ACCOUNT: '584864542664'
           USW2_DB_SECURITY_GROUP_ID: 'sg-0d865988b1b0a2fd4'
           APNE2_DB_SECURITY_GROUP_ID: 'sg-0396d351bedef56d8'
+          OPS_EVENT_BUS_ARN: 'arn:aws:events:us-west-2:879381238815:event-bus/tdx-prover-bus'
+          LAMBDA_ZIP_PATH: ${{ needs.build_rust_lambda.outputs.lambda_zip_path }}
       secrets: inherit

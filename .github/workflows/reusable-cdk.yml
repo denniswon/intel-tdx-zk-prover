@@ -57,6 +57,12 @@ on:
       APNE2_DB_SECURITY_GROUP_ID:
         required: true
         type: string
+      OPS_EVENT_BUS_ARN:
+        required: true
+        type: string
+      LAMBDA_ZIP_PATH:
+        required: true
+        type: string
 
 permissions:
   pull-requests: write # so we can comment on PR
@@ -86,6 +92,13 @@ jobs:
     - run: |
         cd ${{ inputs.CDK_WORKING_DIR }}
         uv sync && uv run npx cdk version
+
+    # Download the Lambda zip artifact
+    - name: Download Lambda zip
+      uses: actions/download-artifact@v4
+      with:
+        name: rust-lambda-zip
+        path: ${{ inputs.LAMBDA_ZIP_PATH }}
 
     - name: Verify CDK Action
       working-directory: ${{ inputs.CDK_WORKING_DIR }}
@@ -131,6 +144,7 @@ jobs:
         OPS_AWS_ACCOUNT: ${{ inputs.OPS_AWS_ACCOUNT }}
         USW2_DB_SECURITY_GROUP_ID: ${{ inputs.USW2_DB_SECURITY_GROUP_ID }}
         APNE2_DB_SECURITY_GROUP_ID: ${{ inputs.APNE2_DB_SECURITY_GROUP_ID }}
+        OPS_EVENT_BUS_ARN: ${{ inputs.OPS_EVENT_BUS_ARN }}
       run: |
         uv run npx cdk ${{ inputs.CDK_ACTION_TYPE }} --all ${{ inputs.ENABLE_DEBUG }} ${{ env.cdk_extra_args }} \
         --context git_commit=${{ env.short_sha }} --context long_git_commit=${{ env.long_sha }} ${{ inputs.CONTEXT_FLAGS }}

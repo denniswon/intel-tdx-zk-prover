@@ -5,12 +5,13 @@ from aws_cdk import Stack
 from aws_cdk import aws_certificatemanager as acm
 from aws_cdk import aws_ec2 as ec2
 from aws_cdk import aws_ecr as ecr
-from aws_cdk import aws_ecs as ecs
-from aws_cdk import aws_elasticache as elasticache
 from aws_cdk import aws_elasticloadbalancingv2 as elbv2
 from aws_cdk import aws_iam as iam
 from aws_cdk import aws_logs as logs
+from aws_cdk import aws_lambda as _lambda
 from aws_cdk import aws_secretsmanager as secretsmanager
+from aws_cdk import aws_events as event_source
+from aws_cdk import aws_events_targets as event_targets
 from constructs import Construct
 
 
@@ -22,12 +23,12 @@ class TdxProver(Stack):
         deploy_env: str,
         app_shortname: str,
         db_security_group_id: str,
-        ecs_cluster: str,
         git_commit: str,
         long_git_commit: str,
         vpc_id: str,
         aws_region: str,
         ecr_repository_arn: str,
+        event_bus_arn: str,
         **kwargs,
     ) -> None:
         super().__init__(scope, construct_id, **kwargs)
@@ -41,11 +42,6 @@ class TdxProver(Stack):
         cdk.Tags.of(self).add("stack", f"{app_shortname}-stack")
 
         vpc = ec2.Vpc.from_lookup(self, "ExistingVPC", vpc_id=vpc_id)
-
-        # Use the passport-identity ecs clusters
-        cluster = ecs.Cluster.from_cluster_attributes(
-            self, "ExistingCluster", cluster_name=ecs_cluster, vpc=vpc
-        )
 
         # Create a load balancer
         lb = elbv2.ApplicationLoadBalancer(
@@ -109,7 +105,7 @@ class TdxProver(Stack):
             description=f"{APP_SHORTNAME} secrets",
             secret_name=f"{APP_SHORTNAME}-secrets",
             generate_secret_string=secretsmanager.SecretStringGenerator(
-                secret_string_template='{"DD_API_KEY": ""}',
+                secret_string_template='{"DD_API_KEY": "", "DATABASE_URL": ""}',
                 generate_string_key="DD_API_KEY",
                 exclude_punctuation=True,
             ),
@@ -153,177 +149,82 @@ class TdxProver(Stack):
             description=f"tdx-prover {aws_region}: Allow inbound traffic on port 5432 from ECS tasks",  # noqa: E501
         )
 
-        # Create a task definition
-        task_definition = ecs.FargateTaskDefinition(
+        # Create a security group for the Lambda function
+        lambda_security_group = ec2.SecurityGroup(
             self,
-            f"{APP_SHORTNAME}-td",
-            cpu=2048,
-            memory_limit_mib=4096,
+            f"{APP_SHORTNAME}LambdaSecurityGroup",
+            vpc=vpc,
+            description=f"Security group for {APP_SHORTNAME} Lambda function",
+            allow_all_outbound=True,
+            security_group_name=f"{APP_SHORTNAME}-lambda-sg",
         )
 
-        # Grant the task role permission to read the secret
-        task_definition.task_role.add_to_policy(
+        # Add ingress rule to the database security group to allow access from Lambda
+        db_security_group.add_ingress_rule(
+            peer=ec2.Peer.security_group_id(lambda_security_group.security_group_id),
+            connection=ec2.Port.tcp(5432),
+            description=f"Allow PostgreSQL access from {APP_SHORTNAME} Lambda function",
+        )
+
+        # Create Rust Lambda Function for Tdx Prover
+        # Note: This Lambda function expects the Rust binary to be built using cargo-lambda:
+        # 1. Install cargo-lambda: cargo install cargo-lambda
+        # 2. Build the Lambda binary: cargo lambda build --release
+        # 3. The binary will be available in ../../target/lambda directory
+        rust_lambda = _lambda.Function(
+            self,
+            f"{APP_SHORTNAME}-rust-lambda",
+            function_name=f"{APP_SHORTNAME}-rust-lambda",
+            runtime=_lambda.Runtime.PROVIDED_AL2,
+            handler="bootstrap",
+            code=_lambda.Code.from_asset("../target/lambda/tdx-prover/bootstrap.zip"),
+            environment={
+                "LAMBDA": "true",
+                "DATABASE_URL": self.service_secrets.secret_value_from_json("DATABASE_URL").unsafe_unwrap(),
+            },
+            vpc=vpc,
+            security_groups=[lambda_security_group],
+        )
+
+        # Grant the Lambda function permission to read the secrets
+        self.service_secrets.grant_read(rust_lambda)
+
+        # Reference the existing event bus from another stack
+        event_bus = event_source.EventBus.from_event_bus_arn(
+            self, 
+            f"{APP_SHORTNAME}-existing-event-bus", 
+            event_bus_arn=event_bus_arn
+        )
+        
+        # Create a new rule that will forward events to our Lambda
+        # This rule will coexist with the rule in the other stack
+        rule = event_source.Rule(
+            self,
+            f"{APP_SHORTNAME}-event-rule",
+            rule_name=f"{APP_SHORTNAME}-event-rule",
+            event_bus=event_bus,
+            description=f"Rule to forward events from {APP_SHORTNAME} event bus to Lambda",
+            # Match the same events as the rule in the other stack
+            event_pattern=event_source.EventPattern(
+                source=["com.magic.newton"],
+            ),
+            targets=[event_targets.LambdaFunction(rust_lambda)]
+        )
+
+        # Allow EventBridge to invoke this Lambda function
+        rust_lambda.add_permission(
+            id=f"{APP_SHORTNAME}-eventbridge-invoke-permission",
+            principal=iam.ServicePrincipal("events.amazonaws.com"),
+            action="lambda:InvokeFunction",
+            source_arn=rule.rule_arn
+        )
+        
+        # Add iam permissions for rust lambda execution to newton-ops event bus
+        rust_lambda.add_to_role_policy(
             iam.PolicyStatement(
-                actions=[
-                    "secretsmanager:GetSecretValue",
-                ],
+                actions=["events:PutEvents"],
                 resources=["*"],
             )
         )
 
-        # Additionally add the SSM permissions for session manager to allow EXEC into running containers
-        task_definition.task_role.add_to_policy(
-            iam.PolicyStatement(
-                actions=[
-                    "ssmmessages:CreateControlChannel",
-                    "ssmmessages:CreateDataChannel",
-                    "ssmmessages:OpenControlChannel",
-                    "ssmmessages:OpenDataChannel",
-                    "secretsmanager:BatchGetSecretValue",
-                    "secretsmanager:GetSecretValue",
-                    "secretsmanager:ListSecrets",
-                ],
-                resources=["*"],
-            )
-        )
-
-        # Fetch the Datadog API key from Secrets Manager using ARN
-        datadog_api_key = self.service_secrets.secret_value_from_json("DD_API_KEY").unsafe_unwrap()
-
-        # Create a container
-        container = task_definition.add_container(
-            f"{APP_SHORTNAME}-container",
-            image=ecs.ContainerImage.from_ecr_repository(ecr_repo, tag=git_commit),
-            container_name=f"{APP_SHORTNAME}-container",
-            cpu=1536,
-            memory_limit_mib=3072,
-            environment={
-                "RUNTIME": "docker",
-                "DEPLOY_ENV": f"{deploy_env}",
-                "DD_APM_ENABLED": "true",
-                "DD_SERVICE": f"{APP_SHORTNAME}",
-                "DD_ENV": f"{deploy_env}",
-                "DD_LOGS_INJECTION": "true",
-                "DD_LOGS_ENABLED": "true",
-                "DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL": "true",
-                "DD_GIT_REPOSITORY_URL": "https://github.com/magiclabs/tdx-prover",
-                "DD_GIT_COMMIT_SHA": long_git_commit,
-                "DD_VERSION": git_commit,
-                "TDXPROVER_ENV": f"{deploy_env}",
-            },
-            secrets={
-                "DD_API_KEY": ecs.Secret.from_secrets_manager(self.service_secrets, "DD_API_KEY"),
-                "DATABASE": ecs.Secret.from_secrets_manager(self.service_secrets, "DATABASE"),
-            },
-            # Firelens logging
-            logging=ecs.LogDrivers.firelens(
-                options={
-                    "Name": "datadog",
-                    "apikey": datadog_api_key,
-                    "dd_service": f"{APP_SHORTNAME}",
-                    "dd_source": "ecs",
-                    "dd_tags": f"env:{deploy_env},service:{APP_SHORTNAME}",
-                    "TLS": "on",
-                    "provider": "ecs",
-                }
-            ),
-        )
-
-        container.add_port_mappings(ecs.PortMapping(container_port=8002))
-
-        # Add Firelens log router container with custom resource configuration
-        task_definition.add_firelens_log_router(
-            "log-router",
-            image=ecs.ContainerImage.from_registry("amazon/aws-for-fluent-bit:stable"),
-            firelens_config=ecs.FirelensConfig(
-                type=ecs.FirelensLogRouterType.FLUENTBIT,
-                options=ecs.FirelensOptions(
-                    config_file_type=ecs.FirelensConfigFileType.FILE,
-                    config_file_value="/fluent-bit/configs/parse-json.conf",
-                ),
-            ),
-            memory_reservation_mib=256,  # Allocate more memory to the log router
-            cpu=128,  # Allocate more CPU to the log router
-            logging=ecs.LogDrivers.aws_logs(stream_prefix="log-router"),
-        )
-
-        #######################################################################
-        # Add DataDog container for Trace and APM
-        #######################################################################
-
-        datadog_container = task_definition.add_container(
-            "DatadogAgent",
-            container_name=f"{APP_SHORTNAME}-datadog-agent",
-            image=ecs.ContainerImage.from_registry("public.ecr.aws/datadog/agent:latest"),
-            essential=False,
-            environment={
-                "DD_SITE": "datadoghq.com",
-                "ECS_FARGATE": "true",
-                "DD_PROCESS_AGENT_ENABLED": "true",
-                "DD_TAGS": f"project:{APP_SHORTNAME}",
-                "DD_CONTAINER_EXCLUDE": "name:datadog-agent",
-                "DD_DOGSTATSD_NON_LOCAL_TRAFFIC": "true",
-                "DD_APM_NON_LOCAL_TRAFFIC": "true",
-                "DEPLOY_ENV": f"{deploy_env}",
-                "DD_APM_ENABLED": "true",
-                "DD_SERVICE": f"{APP_SHORTNAME}",
-                "DD_ENV": f"{deploy_env}",
-                "DD_LOGS_INJECTION": "true",
-                "DD_LOGS_ENABLED": "true",
-                "DD_LOGS_CONFIG_CONTAINER_COLLECT_ALL": "true",
-                "DD_GIT_REPOSITORY_URL": "https://github.com/magiclabs/tdx-prover",
-                "DD_GIT_COMMIT_SHA": long_git_commit,
-                "DD_VERSION": git_commit,
-            },
-            secrets={
-                "DD_API_KEY": ecs.Secret.from_secrets_manager(self.service_secrets, "DD_API_KEY"),
-            },
-            logging=ecs.AwsLogDriver(
-                stream_prefix="datadog", log_retention=logs.RetentionDays.ONE_WEEK
-            ),
-            stop_timeout=Duration.seconds(5),
-        )
-
-        datadog_container.add_port_mappings(
-            ecs.PortMapping(container_port=8126, host_port=8126, protocol=ecs.Protocol.TCP),
-            ecs.PortMapping(container_port=8125, host_port=8125, protocol=ecs.Protocol.UDP),
-        )
-
-        #######################################################################
-        ## Service Initialization                                             ##
-        #######################################################################
-
-        # Create a service for the api container
-        api_service = ecs.FargateService(
-            self,
-            f"{APP_SHORTNAME}-service",
-            service_name=f"{APP_SHORTNAME}-service",
-            cluster=cluster,
-            task_definition=task_definition,
-            security_groups=[task_security_group],
-            desired_count=0,
-            deployment_controller=ecs.DeploymentController(type=ecs.DeploymentControllerType.ECS),
-            min_healthy_percent=50,
-            max_healthy_percent=200,
-            enable_execute_command=True,
-        )
-
-        # Attach the service to the target group
-        api_service.attach_to_application_target_group(target_group)
-
-        ###### Output from CDK ######
-
-        CfnOutput(
-            self,
-            "TaskDefinitionVersion",
-            value=f"{task_definition.family}:{task_definition.task_definition_arn.split(':')[-1]}",
-            description=f"{APP_SHORTNAME} Task Definition Version",
-        )
-
-        CfnOutput(
-            self,
-            "LoadBalancerDNS",
-            value=lb.load_balancer_dns_name,
-            description="LB DNS",
-        )
 

@@ -1,0 +1,70 @@
+name: Build Rust Lambda
+
+on:
+  workflow_call:
+    outputs:
+      lambda_zip_path:
+        description: "Path to the built Lambda zip file"
+        value: ${{ jobs.build.outputs.lambda_zip_path }}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: self-hosted
+    name: "build_rust_lambda"
+    outputs:
+      lambda_zip_path: ${{ steps.set_output.outputs.lambda_zip_path }}
+    steps:
+    - uses: actions/checkout@v4
+
+    # Install system dependencies
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y pkg-config libssl-dev build-essential libpq-dev postgresql postgresql-client
+        echo "Hacking the silly openssl install..."
+        sudo ln -s /usr/include/x86_64-linux-gnu/openssl/opensslconf.h /usr/include/openssl/opensslconf.h
+        sudo ln -s /usr/include/x86_64-linux-gnu/openssl/configuration.h /usr/include/openssl/configuration.h
+
+    # Install Rust
+    - name: Install Rust
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
+        targets: x86_64-unknown-linux-gnu
+
+    # Install zig
+    - uses: mlugg/setup-zig@v1
+      with:
+        version: 0.13.0
+        use-cache: false
+
+    # Install cargo-lambda
+    - name: Install cargo-lambda
+      run: |
+        curl -fsSL https://cargo-lambda.info/install.sh | sh
+        cargo lambda --help
+
+    # Build Rust Lambda
+    - name: Build Rust Lambda
+      run: |
+        export RUSTFLAGS="-L native=/usr/lib/x86_64-linux-gnu" && cargo lambda build --release --output-format zip
+        pwd
+        ls -ltrh ./target/lambda/tdx-prover/
+
+    # Upload the Lambda zip as an artifact
+    - name: Upload Lambda zip
+      uses: actions/upload-artifact@v4
+      with:
+        name: rust-lambda-zip
+        path: ./target/lambda/tdx-prover/
+        retention-days: 1
+
+    # Set output for the zip path
+    - name: Set output
+      id: set_output
+      run: |
+        echo "lambda_zip_path=./target/lambda/tdx-prover/" >> $GITHUB_OUTPUT 
