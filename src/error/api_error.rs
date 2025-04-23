@@ -1,8 +1,11 @@
-use crate::{error::{
-    agent_error::AgentError, attestation_error::AttestationError, db_error::DbError,
-    request_error::RequestError,
-}, response::api_response::ApiErrorResponse};
-use aws_sdk_eventbridge::operation::put_events::PutEventsError;
+use crate::{
+    error::{
+        agent_error::AgentError, attestation_error::AttestationError, db_error::DbError,
+        request_error::RequestError,
+    },
+    response::api_response::ApiErrorResponse,
+};
+use alloy::signers::k256::elliptic_curve::Error;
 use axum::response::{IntoResponse, Response};
 use hyper::StatusCode;
 use thiserror::Error;
@@ -19,7 +22,9 @@ pub enum ApiError {
     #[error(transparent)]
     AttestationError(#[from] AttestationError),
     #[error(transparent)]
-    EventBridgeError(#[from] PutEventsError),
+    UnknownVariantError(#[from] Error),
+    #[error("Something went wrong: {0}")]
+    InvariantViolationError(String),
 }
 
 impl IntoResponse for ApiError {
@@ -29,7 +34,11 @@ impl IntoResponse for ApiError {
             ApiError::RequestError(error) => error.into_response(),
             ApiError::AgentError(error) => error.into_response(),
             ApiError::AttestationError(error) => error.into_response(),
-            ApiError::EventBridgeError(error) => {
+            ApiError::UnknownVariantError(error) => {
+                let status_code = StatusCode::INTERNAL_SERVER_ERROR;
+                ApiErrorResponse::send(status_code.as_u16(), Some(error.to_string()))
+            }
+            ApiError::InvariantViolationError(error) => {
                 let status_code = StatusCode::INTERNAL_SERVER_ERROR;
                 ApiErrorResponse::send(status_code.as_u16(), Some(error.to_string()))
             }

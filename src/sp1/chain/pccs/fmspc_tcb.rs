@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::sp1::constants::{DEFAULT_RPC_URL, FMSPC_TCB_DAO_ADDRESS};
+use crate::config::parameter;
 use crate::sp1::utils::remove_prefix_if_found;
 
 use alloy::{
@@ -24,11 +24,11 @@ sol! {
 }
 
 pub async fn get_tcb_info(tcb_type: u8, fmspc: &str, version: u32) -> Result<Vec<u8>> {
-    let rpc_url = DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL");
+    let rpc_url = parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL");
     let provider = ProviderBuilder::new().on_http(rpc_url);
 
     let fmspc_tcb_dao_contract =
-        IFmspcTcbDao::new(FMSPC_TCB_DAO_ADDRESS.parse::<Address>().unwrap(), &provider);
+        IFmspcTcbDao::new(parameter::get("FMSPC_TCB_DAO_ADDRESS").parse::<Address>().unwrap(), &provider);
 
     let call_builder = fmspc_tcb_dao_contract.getTcbInfo(
         U256::from(tcb_type),
@@ -40,7 +40,7 @@ pub async fn get_tcb_info(tcb_type: u8, fmspc: &str, version: u32) -> Result<Vec
     let tcb_info_str = call_return.tcbObj.tcbInfoStr;
     let signature_bytes = call_return.tcbObj.signature;
 
-    if tcb_info_str.len() == 0 || signature_bytes.len() == 0 {
+    if tcb_info_str.is_empty() || signature_bytes.len() == 0 {
         return Err(anyhow::Error::msg(format!(
             "TCBInfo for FMSPC: {}; Version: {} is missing and must be upserted to on-chain pccs",
             fmspc, version

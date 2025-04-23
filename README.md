@@ -10,6 +10,21 @@ DCAP attestations and generate cryptographic proofs of verification.
 
 This project uses Axum framework and SQLx for DB access layer for storing agent, request, and attestation data. It includes three basic routes: agent, request, and attestation.
 
+## Prerequisites
+
+- [Rust toolchain](https://rustup.rs/)
+- [Cargo Lambda](https://github.com/cargo-lambda/cargo-lambda)
+- PostgreSQL
+- [sqlx-cli](https://crates.io/crates/sqlx-cli)
+
+## Deployment Prerequisites
+
+- [cross-rs](https://github.com/cross-rs/cross)
+- [Docker](https://docs.docker.com/engine/install/)
+- [AWS CLI](https://aws.amazon.com/cli/)
+- [SAM](https://aws.amazon.com/serverless/sam/)
+- [Zig](https://ziglang.org/)
+
 ## Routes
 
 ### Agent
@@ -30,7 +45,6 @@ This project uses Axum framework and SQLx for DB access layer for storing agent,
 
 - POST `/attestation/register` - Register a new attestation
 - GET `/attestation/{id}` - Get attestation by id
-- GET `/attestation/verify_dcap_qvl/{id}` - Verify attestation with QVL
 - GET `/attestation/verify_dcap/{id}` - Verify attestation with DCAP
 
 - GET `/attestation/prove/{id}` - Generate zero knowledge proof of attestation
@@ -51,6 +65,11 @@ This project uses Axum framework and SQLx for DB access layer for storing agent,
 - Create: `cargo sqlx database create`
 - Migrate: `cargo sqlx migrate run`
 - Offline: `cargo sqlx prepare -- --merged`
+
+## Deploy
+
+1. Install `cross-rs` for cross platform build
+2. Build the project using `cross build`
 
 ## Lint
 

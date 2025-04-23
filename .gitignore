@@ -32,6 +32,7 @@ Thumbs.db
 # By-products of tests or scripts
 *.out
 *.tmp
+*.zip
 
 # Miscellaneous
 *.crate
@@ -46,6 +47,5 @@ fuzz/target/
 *.sql
 !migrations/*.sql
 
-curl_command.sh
 Claude.md
 .env

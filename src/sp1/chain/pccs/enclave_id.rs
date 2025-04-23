@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::sp1::constants::{DEFAULT_RPC_URL, ENCLAVE_ID_DAO_ADDRESS};
+use crate::config::parameter;
 use crate::sp1::utils::remove_prefix_if_found;
 
 use alloy::{
@@ -24,6 +24,7 @@ sol! {
 }
 
 #[derive(Debug)]
+#[allow(clippy::upper_case_acronyms)]
 pub enum EnclaveIdType {
     QE,
     QVE,
@@ -31,20 +32,19 @@ pub enum EnclaveIdType {
 }
 
 pub async fn get_enclave_identity(id: EnclaveIdType, version: u32) -> Result<Vec<u8>> {
-    let rpc_url = DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL");
+    let rpc_url = parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL");
     let provider = ProviderBuilder::new().on_http(rpc_url);
 
     let enclave_id_dao_contract = IEnclaveIdentityDao::new(
-        ENCLAVE_ID_DAO_ADDRESS.parse::<Address>().unwrap(),
+        parameter::get("ENCLAVE_ID_DAO_ADDRESS").parse::<Address>().unwrap(),
         &provider,
     );
 
-    let enclave_id_type_uint256;
-    match id {
-        EnclaveIdType::QE => enclave_id_type_uint256 = U256::from(0),
-        EnclaveIdType::QVE => enclave_id_type_uint256 = U256::from(1),
-        EnclaveIdType::TDQE => enclave_id_type_uint256 = U256::from(2),
-    }
+    let enclave_id_type_uint256 = match id {
+        EnclaveIdType::QE => U256::from(0),
+        EnclaveIdType::QVE => U256::from(1),
+        EnclaveIdType::TDQE => U256::from(2),
+    };
 
     let call_builder =
         enclave_id_dao_contract.getEnclaveIdentity(enclave_id_type_uint256, U256::from(version));
@@ -54,7 +54,7 @@ pub async fn get_enclave_identity(id: EnclaveIdType, version: u32) -> Result<Vec
     let identity_str = call_return.enclaveIdObj.identityStr;
     let signature_bytes = call_return.enclaveIdObj.signature;
 
-    if identity_str.len() == 0 || signature_bytes.len() == 0 {
+    if identity_str.is_empty() || signature_bytes.len() == 0 {
         return Err(anyhow::Error::msg(format!(
             "QEIdentity for ID: {:?}; Version: {} is missing and must be upserted to on-chain pccs",
             id, version

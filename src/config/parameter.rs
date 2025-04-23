@@ -1,7 +1,9 @@
 use dotenvy;
 
 pub fn init() {
-    dotenvy::dotenv().expect("Failed to load .env file");
+    unsafe {
+        dotenvy::dotenv().unwrap_unchecked();
+    }
 }
 
 pub fn get(parameter: &str) -> String {

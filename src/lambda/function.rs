@@ -1,0 +1,82 @@
+use std::sync::Arc;
+
+use crate::{
+    config::{
+        database::{Database, DatabaseTrait},
+        parameter,
+    },
+    error::attestation_error::AttestationError,
+    repository::quote_repository::QuoteRepositoryTrait,
+    sp1::prove::{self, submit_proof},
+    state::attestation_state::AttestationState,
+};
+use aws_lambda_events::eventbridge::EventBridgeEvent;
+use lambda_runtime::{Error, LambdaEvent};
+use sqlx::types::Uuid;
+use tracing::Level;
+
+pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), Error> {
+    tracing::debug!("Event: {:?}", event);
+    parameter::init();
+    // initialize tracing for logging
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
+
+    // Extract some useful information from the request
+    let payload = event.payload;
+    tracing::debug!("Payload: {:?}", payload);
+
+    let request_id = payload.detail.get("request_id").unwrap();
+    tracing::debug!("Request ID: {}", request_id);
+    let request_id = Uuid::parse_str(request_id.as_str().unwrap()).unwrap();
+
+    let db_conn = Arc::new(
+        Database::init()
+            .await
+            .unwrap_or_else(|e| panic!("Database error: {}", e)),
+    );
+
+    let state = AttestationState::new(&db_conn);
+
+    let attestation = state.quote_repo.find_by_onchain_request_id(request_id).await;
+    let result = match attestation {
+        Ok(attestation) => {
+            tracing::info!("Attestation found for request ID: {} {}", request_id, attestation.status);
+            let proof = prove::prove(attestation.quote.clone(), None).await;
+            match proof {
+                Ok(proof) => {
+                    tracing::info!("Proof generated for request ID: {}", request_id);
+                    Ok(proof)
+                }
+                Err(e) => {
+                    tracing::error!("Failed to generate proof for request ID: {} {}", request_id, e.to_string());
+                    Err(Box::new(AttestationError::Invalid))
+                }
+            }
+        }
+        _ => {
+            tracing::error!("Attestation not found for request ID: {}", request_id);
+            Err(Box::new(AttestationError::Invalid))
+        }
+    };
+
+    match result {
+        Ok(proof) => {
+            let result = submit_proof(proof).await;
+            match result {
+                Ok((chain_verified, chain_raw_verified_output)) => {
+                    tracing::info!("Proof submitted for request ID: {} chain_verified: {} chain_raw_verified_output: {}",
+                        request_id, chain_verified, hex::encode(&chain_raw_verified_output));
+                    Ok(())
+                }
+                Err(e) => {
+                    tracing::error!("Failed to submit proof for request ID: {}", request_id);
+                    Err(e.into())
+                }
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to generate proof for request ID: {}", request_id);
+            Err(e)
+        }
+    }
+}

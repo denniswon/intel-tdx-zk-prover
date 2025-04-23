@@ -17,12 +17,10 @@ pub fn get_pck_fmspc_and_issuer(quote: &[u8], version: u16, tee_type: u32) -> (S
     let offset: usize;
     if version < 4 {
         offset = V3_SGX_QE_AUTH_DATA_SIZE_OFFSET;
+    } else if tee_type == SGX_TEE_TYPE {
+        offset = V4_SGX_QE_AUTH_DATA_SIZE_OFFSET;
     } else {
-        if tee_type == SGX_TEE_TYPE {
-            offset = V4_SGX_QE_AUTH_DATA_SIZE_OFFSET;
-        } else {
-            offset = V4_TDX_QE_AUTH_DATA_SIZE_OFFSET;
-        }
+        offset = V4_TDX_QE_AUTH_DATA_SIZE_OFFSET;
     }
 
     let cert_data_offset = get_cert_data_offset(quote, offset);
@@ -56,7 +54,7 @@ fn parse_pem(raw_bytes: &[u8]) -> Result<Vec<Pem>, PEMError> {
     Pem::iter_from_buffer(raw_bytes).collect()
 }
 
-fn parse_certchain<'a>(pem_certs: &'a [Pem]) -> Vec<X509Certificate<'a>> {
+fn parse_certchain(pem_certs: &[Pem]) -> Vec<X509Certificate<'_>> {
     pem_certs
         .iter()
         .map(|pem| pem.parse_x509().unwrap())
@@ -82,7 +80,7 @@ fn extract_fmspc_from_extension<'a>(cert: &'a X509Certificate<'a>) -> [u8; 6] {
 
     let mut i = sgx_extensions.content.as_ref();
 
-    while i.len() > 0 {
+    while !i.is_empty() {
         let (j, current_sequence) = Sequence::from_der(i).unwrap();
         i = j;
         let (j, current_oid) = Oid::from_der(current_sequence.content.as_ref()).unwrap();

@@ -11,9 +11,7 @@ edition = "2021"
 alloy = { version = "0.11.0", features = ["full"] }
 anyhow = "1.0.97"
 async-trait = "0.1.88"
-aws-config = "1.6.1"
-aws-sdk-cloudwatchevents = "1.64.0"
-aws-sdk-eventbridge = "1.69.0"
+aws_lambda_events = { version = "0.15.1", default-features = false, features = ["eventbridge"] }
 axum = "0.8.3"
 bcrypt = "0.17.0"
 bigdecimal = { version = "0.4.8", features = ["serde"] }
@@ -21,7 +19,6 @@ bigdecimal-ethers-ext = "0.2.1"
 c-kzg = "1.0.3"
 chrono = { version = "0.4.40", features = ["serde"] }
 clap = "4.5.36"
-dcap-qvl = "0.2.3"
 dcap-rs = { git = "https://github.com/automata-network/dcap-rs.git" }
 dotenvy = "0.15.7"
 ethereum-types = "0.15.1"
@@ -30,6 +27,7 @@ hex = "0.4.3"
 hyper = "1.6.0"
 lambda_runtime = "0.13.0"
 mockall = "0.13.1"
+openssl = { version = "0.10.72", features = ["vendored"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 sp1-sdk = "^4.1.0"

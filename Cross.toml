@@ -4,9 +4,8 @@
 default-target = "x86_64-unknown-linux-gnu"
 
 # One‑liner APT install that runs inside the stock x86_64‑gnu image.
-# $CROSS_DEB_ARCH is expanded automatically by cross.  [oai_citation_attribution:0‡GitHub](https://github.com/cross-rs/cross/wiki/Configuration)
+# $CROSS_DEB_ARCH is expanded automatically by cross.
 pre-build = [
-
     "dpkg --add-architecture $CROSS_DEB_ARCH",
     "apt-get update && apt-get --assume-yes install libpq-dev:$CROSS_DEB_ARCH libssl-dev:$CROSS_DEB_ARCH pkg-config"
 ]
