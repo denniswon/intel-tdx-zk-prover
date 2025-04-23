@@ -11,8 +11,6 @@ edition = "2021"
 alloy = { version = "0.11.0", features = ["full"] }
 anyhow = "1.0.97"
 async-trait = "0.1.88"
-aws-config = "1.6.1"
-aws-sdk-eventbridge = "1.69.0"
 aws_lambda_events = { version = "0.15.1", default-features = false, features = ["eventbridge"] }
 axum = "0.8.3"
 bcrypt = "0.17.0"
