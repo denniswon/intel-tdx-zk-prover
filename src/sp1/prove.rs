@@ -34,13 +34,13 @@ pub struct DcapProof {
 
 // proof_system: [Optional] The proof system to use. Default: Groth16
 pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<DcapProof> {
-    println!("Begin fetching the necessary collaterals...");
+    tracing::debug!("Begin fetching the necessary collaterals...");
     // Step 1: Determine quote version and TEE type
     let quote_version = u16::from_le_bytes([quote[0], quote[1]]);
     let tee_type = u32::from_le_bytes([quote[4], quote[5], quote[6], quote[7]]);
 
-    println!("Quote version: {}", quote_version);
-    println!("TEE Type: {}", tee_type);
+    tracing::debug!("Quote version: {}", quote_version);
+    tracing::debug!("TEE Type: {}", tee_type);
 
     if !(3..=4).contains(&quote_version) {
         return Err(anyhow!("Unsupported quote version"));
@@ -50,14 +50,13 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
         return Err(anyhow!("Unsupported tee type"));
     }
 
-    // Step 2: Load collaterals
-    println!("Quote read successfully. Begin fetching collaterals from the on-chain PCCS");
+    tracing::debug!("Quote read successfully. Begin fetching collaterals from the on-chain PCCS");
 
     let (root_ca, root_ca_crl) = get_certificate_by_id(CA::ROOT).await?;
     if root_ca.is_empty() || root_ca_crl.is_empty() {
         return Err(anyhow!("Intel SGX Root CA is missing"));
     } else {
-        println!("Fetched Intel SGX RootCA and CRL");
+        tracing::debug!("Fetched Intel SGX RootCA and CRL");
     }
 
     let (fmspc, pck_type, pck_issuer) = get_pck_fmspc_and_issuer(&quote, quote_version, tee_type);
@@ -66,7 +65,7 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
     let tcb_version: u32 = if quote_version < 4 { 2 } else { 3 };
     let tcb_info = get_tcb_info(tcb_type, fmspc.as_str(), tcb_version).await?;
 
-    println!("Fetched TCBInfo JSON for FMSPC: {}", fmspc);
+    tracing::debug!("Fetched TCBInfo JSON for FMSPC: {}", fmspc);
 
     let qe_id_type: EnclaveIdType = if tee_type == TDX_TEE_TYPE {
         EnclaveIdType::TDQE
@@ -74,34 +73,34 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
         EnclaveIdType::QE
     };
     let qe_identity = get_enclave_identity(qe_id_type, quote_version as u32).await?;
-    println!("Fetched QEIdentity JSON");
+    tracing::debug!("Fetched QEIdentity JSON");
 
     let (signing_ca, _) = get_certificate_by_id(CA::SIGNING).await?;
     if signing_ca.is_empty() {
         return Err(anyhow!("Intel TCB Signing CA is missing"));
     } else {
-        println!("Fetched Intel TCB Signing CA");
+        tracing::debug!("Fetched Intel TCB Signing CA");
     }
 
     let (_, pck_crl) = get_certificate_by_id(pck_type).await?;
     if pck_crl.is_empty() {
         return Err(anyhow!("CRL for {} is missing", pck_issuer));
     } else {
-        println!("Fetched Intel PCK CRL for {}", pck_issuer);
+        tracing::debug!("Fetched Intel PCK CRL for {}", pck_issuer);
     }
 
     let mut intel_collaterals = IntelCollateral::new();
-    println!("set_tcbinfo_bytes: {:?}", tcb_info);
+    tracing::debug!("set_tcbinfo_bytes: {:?}", tcb_info);
     intel_collaterals.set_tcbinfo_bytes(&tcb_info);
-    println!("set_qeidentity_bytes: {:?}", qe_identity);
+    tracing::debug!("set_qeidentity_bytes: {:?}", qe_identity);
     intel_collaterals.set_qeidentity_bytes(&qe_identity);
-    println!("set_intel_root_ca_der: {:?}", root_ca);
+    tracing::debug!("set_intel_root_ca_der: {:?}", root_ca);
     intel_collaterals.set_intel_root_ca_der(&root_ca);
-    println!("set_sgx_tcb_signing_der: {:?}", signing_ca);
+    tracing::debug!("set_sgx_tcb_signing_der: {:?}", signing_ca);
     intel_collaterals.set_sgx_tcb_signing_der(&signing_ca);
-    println!("set_sgx_intel_root_ca_crl_der: {:?}", root_ca_crl);
+    tracing::debug!("set_sgx_intel_root_ca_crl_der: {:?}", root_ca_crl);
     intel_collaterals.set_sgx_intel_root_ca_crl_der(&root_ca_crl);
-    println!("set_sgx_platform_crl_der: {:?}", pck_crl);
+    tracing::debug!("set_sgx_platform_crl_der: {:?}", pck_crl);
     intel_collaterals.set_sgx_platform_crl_der(&pck_crl);
 
     let intel_collaterals_bytes = intel_collaterals.to_bytes();
@@ -118,7 +117,7 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
 
     // Execute the program first
     let (ret, report) = client.execute(DCAP_ELF, &stdin).run().unwrap();
-    println!(
+    tracing::debug!(
         "executed program with {} cycles",
         report.total_instruction_count()
     );
@@ -126,7 +125,7 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
 
     // Generate the proof
     let (pk, vk) = client.setup(DCAP_ELF);
-    println!("ProofSystem: {:?}", proof_system);
+    tracing::debug!("ProofSystem: {:?}", proof_system);
     let proof = if let Some(proof_system) = proof_system {
         if proof_system == ProofSystem::Groth16 {
             client.prove(&pk, &stdin).groth16().run().unwrap()
@@ -142,13 +141,13 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
     let mut output = Vec::with_capacity(output_len);
     output.extend_from_slice(&ret_slice[2..2 + output_len]);
 
-    println!("Execution Output: {}", hex::encode(ret_slice));
-    println!(
+    tracing::debug!("Execution Output: {}", hex::encode(ret_slice));
+    tracing::debug!(
         "Proof pub value: {}",
         hex::encode(proof.public_values.as_slice())
     );
-    println!("VK: {}", vk.bytes32().to_string().as_str());
-    println!("Proof: {}", hex::encode(proof.bytes()));
+    tracing::debug!("VK: {}", vk.bytes32().to_string().as_str());
+    tracing::debug!("Proof: {}", hex::encode(proof.bytes()));
 
     Ok(DcapProof { output, vk, proof })
 }
@@ -169,9 +168,9 @@ pub async fn verify_proof(proof: DcapProof) -> Result<VerifiedOutput> {
 
 pub async fn submit_proof(proof: DcapProof) -> Result<(bool, Vec<u8>)> {
     // Send the calldata to Ethereum.
-    println!("Submitting proofs to on-chain DCAP contract to be verified...");
+    tracing::info!("Submitting proofs to on-chain DCAP contract to be verified...");
     let calldata = generate_attestation_calldata(&proof.output, &proof.proof.bytes());
-    println!("Calldata: {}", hex::encode(&calldata));
+    tracing::debug!("Calldata: {}", hex::encode(&calldata));
 
     let tx_sender =
         TxSender::new(DEFAULT_RPC_URL, DEFAULT_DCAP_CONTRACT).expect("Failed to create txSender");
@@ -181,9 +180,9 @@ pub async fn submit_proof(proof: DcapProof) -> Result<(bool, Vec<u8>)> {
     let (chain_verified, chain_raw_verified_output) = decode_attestation_ret_data(call_output);
 
     if chain_verified && proof.output == chain_raw_verified_output {
-        println!("On-chain verification succeed.");
+        tracing::info!("On-chain verification succeed.");
     } else {
-        println!("On-chain verification fail!");
+        tracing::error!("On-chain verification fail!");
     }
 
     Ok((chain_verified, chain_raw_verified_output))

@@ -8,6 +8,6 @@
   "region": "us-east-2",
   "resources": ["arn:aws:events:us-east-2:123456789012:rule/my-scheduled-rule"],
   "detail": {
-    "request_id": "1"
+    "request_id": 8
   }
 }

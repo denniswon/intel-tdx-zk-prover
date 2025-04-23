@@ -11,6 +11,7 @@ mod dto;
 mod entity;
 mod error;
 mod handler;
+mod lambda;
 mod middleware;
 mod repository;
 mod response;
@@ -18,12 +19,14 @@ mod routes;
 mod service;
 mod sp1;
 mod state;
-mod lambda;
 
 #[::tokio::main]
 async fn main() -> Result<(), Error> {
+    unsafe {
+        dotenvy::dotenv().unwrap_unchecked();
+    }
     let lambda = std::env::var("LAMBDA")
-        .or_else(|_| Ok::<String, std::env::VarError>("false".to_string()))
+        .or_else(|_| Ok::<String, std::env::VarError>("true".to_string()))
         .unwrap();
 
     match lambda.as_str() {
