@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::sp1::chain::attestation::{decode_attestation_ret_data, generate_attestation_calldata};
+use crate::sp1::chain::attestation::{decode_attestation_ret_data, generate_prove_calldata};
 use crate::sp1::chain::pccs::enclave_id::{get_enclave_identity, EnclaveIdType};
 use crate::sp1::chain::pccs::fmspc_tcb::get_tcb_info;
 use crate::sp1::chain::pccs::pcs::get_certificate_by_id;
@@ -169,7 +169,7 @@ pub async fn verify_proof(proof: DcapProof) -> Result<VerifiedOutput> {
 pub async fn submit_proof(proof: DcapProof) -> Result<(bool, Vec<u8>)> {
     // Send the calldata to Ethereum.
     tracing::info!("Submitting proofs to on-chain DCAP contract to be verified...");
-    let calldata = generate_attestation_calldata(&proof.output, &proof.proof.bytes());
+    let calldata = generate_prove_calldata(&proof.output, &proof.proof.bytes());
     tracing::info!("Calldata: {}", hex::encode(&calldata));
 
     let tx_sender = TxSender::new(
