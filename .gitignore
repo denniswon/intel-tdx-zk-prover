@@ -47,6 +47,5 @@ fuzz/target/
 *.sql
 !migrations/*.sql
 
-curl_command.sh
 Claude.md
 .env
