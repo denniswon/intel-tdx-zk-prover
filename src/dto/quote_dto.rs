@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::entity::quote::{TdxQuote, TdxQuoteStatus};
 use chrono::NaiveDateTime;
 use sqlx::types::Uuid;
