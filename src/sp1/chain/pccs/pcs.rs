@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::sp1::constants::{DEFAULT_RPC_URL, PCS_DAO_ADDRESS};
+use crate::config::parameter;
 
 use alloy::{primitives::Address, providers::ProviderBuilder, sol};
 
@@ -21,10 +21,10 @@ sol! {
 }
 
 pub async fn get_certificate_by_id(ca_id: IPCSDao::CA) -> Result<(Vec<u8>, Vec<u8>)> {
-    let rpc_url = DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL");
+    let rpc_url = parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL");
     let provider = ProviderBuilder::new().on_http(rpc_url);
 
-    let pcs_dao_contract = IPCSDao::new(PCS_DAO_ADDRESS.parse::<Address>().unwrap(), &provider);
+    let pcs_dao_contract = IPCSDao::new(parameter::get("PCS_DAO_ADDRESS").parse::<Address>().unwrap(), &provider);
 
     let call_builder = pcs_dao_contract.getCertificateById(ca_id);
 

@@ -6,7 +6,7 @@ use crate::sp1::chain::pccs::fmspc_tcb::get_tcb_info;
 use crate::sp1::chain::pccs::pcs::get_certificate_by_id;
 use crate::sp1::chain::pccs::pcs::IPCSDao::CA;
 use crate::sp1::chain::TxSender;
-use crate::sp1::constants::*;
+use crate::config::parameter;
 use crate::sp1::parser::get_pck_fmspc_and_issuer;
 
 use anyhow::{anyhow, Result};
@@ -170,14 +170,19 @@ pub async fn submit_proof(proof: DcapProof) -> Result<(bool, Vec<u8>)> {
     // Send the calldata to Ethereum.
     tracing::info!("Submitting proofs to on-chain DCAP contract to be verified...");
     let calldata = generate_attestation_calldata(&proof.output, &proof.proof.bytes());
-    tracing::debug!("Calldata: {}", hex::encode(&calldata));
+    tracing::info!("Calldata: {}", hex::encode(&calldata));
 
-    let tx_sender =
-        TxSender::new(DEFAULT_RPC_URL, DEFAULT_DCAP_CONTRACT).expect("Failed to create txSender");
+    let tx_sender = TxSender::new(
+        parameter::get("DEFAULT_RPC_URL").as_str(),
+        parameter::get("DEFAULT_DCAP_CONTRACT").as_str(),
+    ).expect("Failed to create txSender");
 
     // staticcall to the DCAP verifier contract to verify proof
     let call_output = (tx_sender.call(calldata.clone()).await?).to_vec();
+    tracing::info!("Call output: {}", hex::encode(&call_output));
     let (chain_verified, chain_raw_verified_output) = decode_attestation_ret_data(call_output);
+    tracing::info!("Chain verified: {}", chain_verified);
+    tracing::info!("Chain raw verified output: {}", hex::encode(&chain_raw_verified_output));
 
     if chain_verified && proof.output == chain_raw_verified_output {
         tracing::info!("On-chain verification succeed.");
