@@ -18,7 +18,7 @@ pub trait QuoteRepositoryTrait {
         onchain_request_id: Uuid,
         verification_status: Option<TdxQuoteStatus>
     ) -> Vec<TdxQuote>;
-    async fn find(&self, id: Uuid) -> Result<TdxQuote, DbError>;
+    async fn find_by_onchain_request_id(&self, onchain_request_id: Uuid) -> Result<TdxQuote, DbError>;
 }
 
 #[async_trait]
@@ -54,7 +54,7 @@ impl QuoteRepositoryTrait for QuoteRepository {
         }
     }
 
-    async fn find(&self, id: Uuid) -> Result<TdxQuote, DbError> {
+    async fn find_by_onchain_request_id(&self, onchain_request_id: Uuid) -> Result<TdxQuote, DbError> {
         let quote = sqlx::query_as!(
             TdxQuote,
             r#"SELECT
@@ -65,7 +65,7 @@ impl QuoteRepositoryTrait for QuoteRepository {
             updated_at as "updated_at: _",
             status as "status: crate::entity::quote::TdxQuoteStatus"
             FROM tdx_quote WHERE onchain_request_id = $1"#,
-            id,
+            onchain_request_id,
         )
         .fetch_one(self.db_conn.get_pool())
         .await

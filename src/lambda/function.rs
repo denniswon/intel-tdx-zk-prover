@@ -37,7 +37,7 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
 
     let state = AttestationState::new(&db_conn);
 
-    let attestation = state.quote_repo.find(request_id).await;
+    let attestation = state.quote_repo.find_by_onchain_request_id(request_id).await;
     let result = match attestation {
         Ok(attestation) => {
             tracing::info!("Attestation found for request ID: {} {}", request_id, attestation.status);
