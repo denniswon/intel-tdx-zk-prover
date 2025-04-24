@@ -1,0 +1,91 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT\n            id,\n            proof_type as \"proof_type: crate::entity::quote::ProofType\",\n            request_id,\n            txn_hash,\n            onchain_request_id,\n            quote,\n            created_at as \"created_at: _\",\n            updated_at as \"updated_at: _\",\n            status as \"status: crate::entity::quote::TdxQuoteStatus\"\n            FROM tdx_quote WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "proof_type: crate::entity::quote::ProofType",
+        "type_info": {
+          "Custom": {
+            "name": "prooftype",
+            "kind": {
+              "Enum": [
+                "risc0",
+                "sp1"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "request_id",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 3,
+        "name": "txn_hash",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "onchain_request_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "quote",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at: _",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at: _",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "status: crate::entity::quote::TdxQuoteStatus",
+        "type_info": {
+          "Custom": {
+            "name": "tdxquotestatus",
+            "kind": {
+              "Enum": [
+                "pending",
+                "failure",
+                "success"
+              ]
+            }
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "90a77ef475dd52c3979fd127700c82c3627670c5e999d41fac00ece20b888b46"
+}

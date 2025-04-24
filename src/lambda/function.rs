@@ -4,7 +4,12 @@ use crate::{
     config::{
         database::{Database, DatabaseTrait},
         parameter,
-    }, entity::quote::{ProofType, TdxQuoteStatus}, error::attestation_error::AttestationError, repository::{onchain_request_repository::OnchainRequestRepositoryTrait, quote_repository::QuoteRepositoryTrait}, sp1::prove, state::attestation_state::AttestationState
+    },
+    entity::quote::{ProofType, TdxQuoteStatus},
+    error::quote_error::QuoteError,
+    repository::{quote_repository::QuoteRepositoryTrait, request_repository::OnchainRequestRepositoryTrait},
+    sp1::prove,
+    state::{quote_state::QuoteState, request_state::RequestState}
 };
 use alloy::primitives::TxHash;
 use aws_lambda_events::eventbridge::EventBridgeEvent;
@@ -32,9 +37,10 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
             .unwrap_or_else(|e| panic!("Database error: {}", e)),
     );
 
-    let state = AttestationState::new(&db_conn);
+    let quote_state = QuoteState::new(&db_conn);
+    let request_state = RequestState::new(&db_conn);
 
-    let attestation = state.quote_repo.find_by_onchain_request_id(request_id).await;
+    let attestation = quote_state.quote_repo.find_by_onchain_request_id(request_id).await;
     let mut quote_id: Uuid = Uuid::nil();
     let result = match attestation {
         Ok(attestation) => {
@@ -48,19 +54,19 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
                 }
                 Err(e) => {
                     tracing::error!("Failed to generate proof for request ID: {} {}", request_id, e.to_string());
-                    Err(Box::new(AttestationError::Invalid))
+                    Err(Box::new(QuoteError::Invalid))
                 }
             }
         }
         _ => {
             tracing::error!("Attestation not found for request ID: {}", request_id);
-            Err(Box::new(AttestationError::Invalid))
+            Err(Box::new(QuoteError::Invalid))
         }
     };
 
     match result {
         Ok(proof) => {
-            let onchain_request = state.onchain_request_repo.find(request_id).await;
+            let onchain_request = request_state.request_repo.find(request_id).await;
             match onchain_request {
                 Ok(onchain_request) => {
                     tracing::info!("Onchain request found for request ID: {}", request_id);
@@ -77,7 +83,7 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
                                 tracing::info!("Transaction hash: {}", hex::encode(&response.transaction_hash));
 
                                 // Update onchain request status
-                                match state.quote_repo.update_status(
+                                match quote_state.quote_repo.update_status(
                                     quote_id,
                                     response.proof_type,
                                     response.status,
@@ -90,7 +96,7 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
                             } else if tx_hash.is_some() {
                                 tracing::info!("Transaction hash: {}", hex::encode(&tx_hash.unwrap().to_vec()));
                                 // Update onchain request status
-                                match state.quote_repo.update_status(
+                                match quote_state.quote_repo.update_status(
                                     quote_id,
                                     ProofType::Sp1,
                                     TdxQuoteStatus::Failure,
@@ -105,7 +111,7 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
                         }
                         Err(e) => {
                             tracing::error!("Failed to submit proof for request ID: {} {}", request_id, e);
-                            match state.quote_repo.update_status(
+                            match quote_state.quote_repo.update_status(
                                 quote_id,
                                 ProofType::Sp1,
                                 TdxQuoteStatus::Failure,
@@ -121,7 +127,7 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
                 }
                 _ => {
                     tracing::error!("Failed to fetch onchain request for request ID: {}", request_id);
-                    Err(Box::new(AttestationError::Invalid))
+                    Err(Box::new(QuoteError::Invalid))
                 }
             }
         }

@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use sqlx::types::Uuid;
 
 #[derive(Clone, Debug, sqlx::FromRow)]
@@ -16,7 +17,7 @@ pub struct TdxQuote {
     pub request_id: Option<Vec<u8>>,
 }
 
-#[derive(strum_macros::Display, Debug, Clone, Copy, sqlx::Type)]
+#[derive(strum_macros::Display, Debug, Clone, Copy, sqlx::Type, Serialize, Deserialize)]
 #[strum(serialize_all = "lowercase")]
 #[sqlx(type_name = "prooftype", rename_all = "lowercase")]
 pub enum ProofType {
@@ -24,11 +25,19 @@ pub enum ProofType {
     Risc0,
 }
 
-#[derive(strum_macros::Display, Debug, Clone, Copy, sqlx::Type)]
+#[derive(strum_macros::Display, Debug, Clone, Copy, sqlx::Type, Serialize, Deserialize)]
 #[strum(serialize_all = "lowercase")]
 #[sqlx(type_name = "tdxquotestatus", rename_all = "lowercase")]
 pub enum TdxQuoteStatus {
     Pending,
     Failure,
     Success,
+}
+
+#[derive(strum_macros::Display, Debug, Clone, Copy, sqlx::Type, Serialize, Deserialize)]
+#[strum(serialize_all = "lowercase")]
+#[sqlx(type_name = "quote_type", rename_all = "lowercase")]
+pub enum QuoteType {
+    DcapV3,
+    DcapV4,
 }

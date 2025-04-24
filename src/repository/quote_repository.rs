@@ -14,6 +14,7 @@ pub struct QuoteRepository {
 #[async_trait]
 pub trait QuoteRepositoryTrait {
     fn new(db_conn: &Arc<Database>) -> Self;
+    async fn find(&self, id: Uuid) -> Result<TdxQuote, DbError>;
     async fn find_all_by_onchain_request_id(&self,
         onchain_request_id: Uuid,
         verification_status: Option<TdxQuoteStatus>
@@ -35,6 +36,31 @@ impl QuoteRepositoryTrait for QuoteRepository {
         Self {
             db_conn: Arc::clone(db_conn),
         }
+    }
+
+    async fn find(&self, id: Uuid) -> Result<TdxQuote, DbError> {
+        let quote = sqlx::query_as!(
+            TdxQuote,
+            r#"SELECT
+            id,
+            proof_type as "proof_type: crate::entity::quote::ProofType",
+            request_id,
+            txn_hash,
+            onchain_request_id,
+            quote,
+            created_at as "created_at: _",
+            updated_at as "updated_at: _",
+            status as "status: crate::entity::quote::TdxQuoteStatus"
+            FROM tdx_quote WHERE id = $1"#,
+            id,
+        )
+        .fetch_one(self.db_conn.get_pool())
+        .await
+        .map_err(|e| {
+            println!("Failed to fetch quote: {}", e);
+            DbError::SomethingWentWrong("Failed to fetch quote".to_string())
+        })?;
+        return Ok(quote);
     }
 
     async fn find_all_by_onchain_request_id(&self,
