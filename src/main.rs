@@ -22,9 +22,6 @@ mod state;
 
 #[::tokio::main]
 async fn main() -> Result<(), Error> {
-    unsafe {
-        dotenvy::dotenv().unwrap_unchecked();
-    }
     let lambda = std::env::var("LAMBDA")
         .or_else(|_| Ok::<String, std::env::VarError>("true".to_string()))
         .unwrap();
