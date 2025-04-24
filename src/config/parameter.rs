@@ -1,8 +1,8 @@
 use dotenvy;
 
 pub fn init() {
-    unsafe {
-        dotenvy::dotenv().unwrap_unchecked();
+    if std::env::var("ENV").unwrap_or("dev".to_string()) != "prod" {
+        dotenvy::dotenv().unwrap();
     }
 }
 

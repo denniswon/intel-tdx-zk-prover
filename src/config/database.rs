@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use sqlx::{Error, Postgres, Pool};
 
-use dotenvy::dotenv;
 use sqlx::postgres::PgPoolOptions;
 use tracing::info;
+
+use crate::config::parameter;
 
 #[derive(Clone)]
 pub struct Database {
@@ -21,8 +22,8 @@ pub trait DatabaseTrait {
 #[async_trait]
 impl DatabaseTrait for Database {
     async fn init() -> Result<Self, Error> {
-        dotenv().ok();
-        let url = std::env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+        parameter::init();
+        let url = parameter::get("DATABASE_URL");
         let pool = PgPoolOptions::new().connect(&url).await?;
         info!("Connected to the database!");
         Ok(Self { pool })
