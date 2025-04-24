@@ -18,7 +18,7 @@ pub struct TdxQuote {
 
 #[derive(strum_macros::Display, Debug, Clone, Copy, sqlx::Type)]
 #[strum(serialize_all = "lowercase")]
-#[sqlx(type_name = "proof_type", rename_all = "lowercase")]
+#[sqlx(type_name = "prooftype", rename_all = "lowercase")]
 pub enum ProofType {
     Sp1,
     Risc0,
