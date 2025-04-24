@@ -1,0 +1,38 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE tdx_quote SET status = $2, txn_hash = $3, proof_type = $4 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "tdxquotestatus",
+            "kind": {
+              "Enum": [
+                "pending",
+                "failure",
+                "success"
+              ]
+            }
+          }
+        },
+        "Bytea",
+        {
+          "Custom": {
+            "name": "prooftype",
+            "kind": {
+              "Enum": [
+                "risc0",
+                "sp1"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bc8478f028a6dee6341b509dfdec5b55bfa95f277019f49b5a7d42938d957cac"
+}
