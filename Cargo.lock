@@ -124,6 +124,7 @@ checksum = "28e2652684758b0d9b389d248b209ed9fd9989ef489a550265fe4bb8454fe7eb"
 dependencies = [
  "alloy-primitives",
  "num_enum 0.7.3",
+ "serde",
  "strum 0.27.1",
 ]
 
@@ -8093,6 +8094,7 @@ name = "tdx-prover"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "alloy-chains",
  "anyhow",
  "async-trait",
  "aws_lambda_events",

@@ -11,6 +11,8 @@ use crate::sp1::chain::TxSender;
 use crate::config::parameter;
 use crate::sp1::parser::get_pck_fmspc_and_issuer;
 
+use alloy::primitives::TxHash;
+use alloy_chains::NamedChain;
 use anyhow::{anyhow, Result};
 use dcap_rs::constants::{SGX_TEE_TYPE, TDX_TEE_TYPE};
 use dcap_rs::types::{collaterals::IntelCollateral, VerifiedOutput};
@@ -43,7 +45,7 @@ pub struct ProofResponse {
 
 #[derive(Clone, Validate, Debug)]
 pub struct SubmitProofResponse {
-    pub transaction_hash: Vec<u8>,
+    pub transaction_hash: TxHash,
     pub proof_type: ProofType,
     pub status: TdxQuoteStatus,
 }
@@ -182,13 +184,14 @@ pub async fn verify_proof(proof: DcapProof) -> Result<VerifiedOutput> {
     Ok(parsed_output)
 }
 
-pub async fn submit_proof(request: OnchainRequest, proof: DcapProof) -> Result<(bool, Vec<u8>, Option<SubmitProofResponse>)> {
+pub async fn submit_proof(request: OnchainRequest, proof: DcapProof) -> Result<(bool, Vec<u8>, Option<TxHash>, Option<SubmitProofResponse>)> {
     // Send the calldata to Ethereum.
     tracing::info!("Submitting proofs to on-chain DCAP contract to be verified...");
 
     let tx_sender = TxSender::new(
         parameter::get("DEFAULT_RPC_URL").as_str(),
         parameter::get("DEFAULT_DCAP_CONTRACT").as_str(),
+        NamedChain::Base
     ).expect("Failed to create txSender");
 
     let verify_only = parameter::get("VERIFY_ONLY");
@@ -210,20 +213,35 @@ pub async fn submit_proof(request: OnchainRequest, proof: DcapProof) -> Result<(
             } else {
                 tracing::error!("On-chain verification fail!");
             }
-            Ok((chain_verified, chain_raw_verified_output, None))
+            Ok((chain_verified, chain_raw_verified_output, None, None))
         },
         _ => {
             tracing::info!("Submitting proof transaction...");
             let calldata = generate_prove_calldata(&request, &proof.output, &proof.proof.bytes());
             tracing::info!("Calldata: {}", hex::encode(&calldata));
             // submit proof transaction to Halo contract to verify proof
-            let receipt = tx_sender.send(calldata.clone()).await?;
-            tracing::info!("Transaction receipt: {:#?}", receipt);
-            Ok((true, proof.output, Some(SubmitProofResponse {
-                transaction_hash: receipt.transaction_hash.to_vec(),
-                proof_type: ProofType::Sp1,
-                status: TdxQuoteStatus::Success
-            })))
+            match tx_sender.send(calldata.clone()).await {
+                Ok((tx_hash, receipt)) => {
+                    tracing::info!("Transaction hash: {}", tx_hash);
+                    tracing::info!("Transaction receipt: {:#?}", receipt);
+                    match receipt {
+                        Some(_receipt) => {
+                            Ok((true, proof.output, Some(tx_hash), Some(SubmitProofResponse {
+                                transaction_hash: tx_hash,
+                                proof_type: ProofType::Sp1,
+                                status: TdxQuoteStatus::Success
+                            })))
+                        },
+                        None => {
+                            Ok((false, proof.output, Some(tx_hash), None))
+                        }
+                    }
+                },
+                Err(e) => {
+                    tracing::error!("Failed to submit proof transaction: {}", e);
+                    Ok((false, proof.output, None, None))
+                }
+            }
         }
     }
 }

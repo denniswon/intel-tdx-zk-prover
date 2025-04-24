@@ -9,6 +9,7 @@ edition = "2021"
 
 [dependencies]
 alloy = { version = "0.11.0", features = ["full"] }
+alloy-chains = "0.1.69"
 anyhow = "1.0.97"
 async-trait = "0.1.88"
 aws_lambda_events = { version = "0.15.1", default-features = false, features = ["eventbridge"] }
