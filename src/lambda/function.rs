@@ -6,6 +6,7 @@ use crate::{
         parameter,
     }, entity::quote::{ProofType, TdxQuoteStatus}, error::attestation_error::AttestationError, repository::{onchain_request_repository::OnchainRequestRepositoryTrait, quote_repository::QuoteRepositoryTrait}, sp1::prove, state::attestation_state::AttestationState
 };
+use alloy::primitives::TxHash;
 use aws_lambda_events::eventbridge::EventBridgeEvent;
 use lambda_runtime::{Error, LambdaEvent};
 use sqlx::types::Uuid;
@@ -64,9 +65,10 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
                 Ok(onchain_request) => {
                     tracing::info!("Onchain request found for request ID: {}", request_id);
                     tracing::info!("Onchain request: {:?}", onchain_request);
-                    let result: Result<(bool, Vec<u8>, Option<prove::SubmitProofResponse>), anyhow::Error> = prove::submit_proof(onchain_request, proof.proof).await;
+                    let result: Result<(bool, Vec<u8>, Option<TxHash>, Option<prove::SubmitProofResponse>), anyhow::Error> =
+                        prove::submit_proof(onchain_request, proof.proof).await;
                     match result {
-                        Ok((chain_verified, chain_raw_verified_output, response)) => {
+                        Ok((chain_verified, chain_raw_verified_output, tx_hash, response)) => {
                             tracing::info!("Proof submitted for request ID: {} chain_verified: {} chain_raw_verified_output: {}",
                                 request_id, chain_verified, hex::encode(&chain_raw_verified_output));
                             if response.is_some() {
@@ -79,11 +81,24 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
                                     quote_id,
                                     response.proof_type,
                                     response.status,
-                                    Some(response.transaction_hash),
+                                    Some(tx_hash.unwrap().to_vec()),
                                     None,
                                 ).await {
                                     Ok(_) => tracing::info!("tdx_quote updated successfully {quote_id} {}", response.status),
                                     Err(e) => tracing::error!("Failed to update quote status on success: {}", e)
+                                }
+                            } else if tx_hash.is_some() {
+                                tracing::info!("Transaction hash: {}", hex::encode(&tx_hash.unwrap().to_vec()));
+                                // Update onchain request status
+                                match state.quote_repo.update_status(
+                                    quote_id,
+                                    ProofType::Sp1,
+                                    TdxQuoteStatus::Failure,
+                                    Some(tx_hash.unwrap().to_vec()),
+                                    None,
+                                ).await {
+                                    Ok(_) => tracing::info!("tdx_quote updated successfully {quote_id} {}", TdxQuoteStatus::Failure),
+                                    Err(e) => tracing::error!("Failed to update quote status on failure: {}", e)
                                 }
                             }
                             Ok(())
