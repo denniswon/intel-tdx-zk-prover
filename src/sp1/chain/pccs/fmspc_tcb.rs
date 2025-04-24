@@ -25,7 +25,7 @@ sol! {
 
 pub async fn get_tcb_info(tcb_type: u8, fmspc: &str, version: u32) -> Result<Vec<u8>> {
     let rpc_url = parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL");
-    let provider = ProviderBuilder::new().on_http(rpc_url);
+    let provider = ProviderBuilder::new().connect_http(rpc_url);
 
     let fmspc_tcb_dao_contract =
         IFmspcTcbDao::new(parameter::get("FMSPC_TCB_DAO_ADDRESS").parse::<Address>().unwrap(), &provider);
@@ -37,8 +37,8 @@ pub async fn get_tcb_info(tcb_type: u8, fmspc: &str, version: u32) -> Result<Vec
     );
 
     let call_return = call_builder.call().await?;
-    let tcb_info_str = call_return.tcbObj.tcbInfoStr;
-    let signature_bytes = call_return.tcbObj.signature;
+    let tcb_info_str = call_return.tcbInfoStr;
+    let signature_bytes = call_return.signature;
 
     if tcb_info_str.is_empty() || signature_bytes.len() == 0 {
         return Err(anyhow::Error::msg(format!(

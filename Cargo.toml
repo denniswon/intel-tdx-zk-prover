@@ -1,29 +1,21 @@
-[[bin]]
-name = "tdx-prover"
-path = "src/main.rs"
-
 [package]
 name = "tdx-prover"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy = { version = "0.11.0", features = ["full"] }
-alloy-chains = "0.1.69"
+alloy = "0.15.2"
+alloy-chains = "0.2.0"
 anyhow = "1.0.97"
 async-trait = "0.1.88"
 aws_lambda_events = { version = "0.15.1", default-features = false, features = ["eventbridge"] }
 axum = "0.8.3"
 bcrypt = "0.17.0"
 bigdecimal = { version = "0.4.8", features = ["serde"] }
-bigdecimal-ethers-ext = "0.2.1"
-c-kzg = "1.0.3"
 chrono = { version = "0.4.40", features = ["serde"] }
 clap = "4.5.36"
 dcap-rs = { git = "https://github.com/automata-network/dcap-rs.git" }
 dotenvy = "0.15.7"
-ethereum-types = "0.15.1"
-ethers_primitives = "0.2.2"
 hex = "0.4.3"
 hyper = "1.6.0"
 lambda_runtime = "0.13.0"

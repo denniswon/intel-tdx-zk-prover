@@ -1,15 +1,12 @@
-
+use alloy::primitives::Address;
 use serde::{Deserialize, Serialize};
 use sqlx::encode::IsNull;
 
 use sqlx::error::BoxDynError;
 use sqlx::{Decode, Encode, Type};
 
-use ethereum_types::H160;
-use std::str::FromStr;
-
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct EvmAddress(pub H160);
+pub struct EvmAddress(pub Address);
 
 impl std::fmt::Display for EvmAddress {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -19,7 +16,7 @@ impl std::fmt::Display for EvmAddress {
 
 impl From<String> for EvmAddress {
     fn from(s: String) -> Self {
-        Self(H160::from_str(&s).unwrap())
+        Self(Address::parse_checksummed(s, None).unwrap())
     }
 }
 
@@ -29,13 +26,13 @@ impl From<EvmAddress> for String {
     }
 }
 
-impl From<H160> for EvmAddress {
-    fn from(addr: H160) -> Self {
+impl From<Address> for EvmAddress {
+    fn from(addr: Address) -> Self {
         Self(addr)
     }
 }
 
-impl From<EvmAddress> for H160 {
+impl From<EvmAddress> for Address {
     fn from(evm_addr: EvmAddress) -> Self {
         evm_addr.0
     }
@@ -48,7 +45,7 @@ where
 {
     fn decode(value: <DB as sqlx::Database>::ValueRef<'r>) -> Result<Self, BoxDynError> {
         let s = <&str as Decode<DB>>::decode(value)?;
-        Ok(EvmAddress(H160::from_str(s)?))
+        Ok(EvmAddress(Address::parse_checksummed(s, None).unwrap()))
     }
 }
 

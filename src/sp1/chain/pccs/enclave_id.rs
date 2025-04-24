@@ -33,7 +33,7 @@ pub enum EnclaveIdType {
 
 pub async fn get_enclave_identity(id: EnclaveIdType, version: u32) -> Result<Vec<u8>> {
     let rpc_url = parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL");
-    let provider = ProviderBuilder::new().on_http(rpc_url);
+    let provider = ProviderBuilder::new().connect_http(rpc_url);
 
     let enclave_id_dao_contract = IEnclaveIdentityDao::new(
         parameter::get("ENCLAVE_ID_DAO_ADDRESS").parse::<Address>().unwrap(),
@@ -51,8 +51,8 @@ pub async fn get_enclave_identity(id: EnclaveIdType, version: u32) -> Result<Vec
 
     let call_return = call_builder.call().await?;
 
-    let identity_str = call_return.enclaveIdObj.identityStr;
-    let signature_bytes = call_return.enclaveIdObj.signature;
+    let identity_str = call_return.identityStr;
+    let signature_bytes = call_return.signature;
 
     if identity_str.is_empty() || signature_bytes.len() == 0 {
         return Err(anyhow::Error::msg(format!(
