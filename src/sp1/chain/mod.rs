@@ -48,6 +48,7 @@ impl TxSender {
         let tx = provider
             .send_transaction(tx.clone())
             .await?;
+        tracing::info!("TxSender: Transaction hash: {}", tx.tx_hash());
         let tx_hash = tx.tx_hash().clone();
         match tx.get_receipt().await {
             Ok(receipt) => Ok((tx_hash, Some(receipt))),
