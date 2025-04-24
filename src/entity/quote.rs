@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
 use sqlx::types::Uuid;
 
 #[derive(Clone, Debug, sqlx::FromRow)]
@@ -12,11 +11,22 @@ pub struct TdxQuote {
     pub quote: Vec<u8>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub proof_type: Option<ProofType>,
+    pub txn_hash: Option<Vec<u8>>,
+    pub request_id: Option<Vec<u8>>,
 }
 
-#[derive(strum_macros::Display, Debug, Clone, Copy, sqlx::Type, Deserialize, Serialize)]
+#[derive(strum_macros::Display, Debug, Clone, Copy, sqlx::Type)]
 #[strum(serialize_all = "lowercase")]
-#[sqlx(type_name = "status", rename_all = "lowercase")]
+#[sqlx(type_name = "proof_type", rename_all = "lowercase")]
+pub enum ProofType {
+    Sp1,
+    Risc0,
+}
+
+#[derive(strum_macros::Display, Debug, Clone, Copy, sqlx::Type)]
+#[strum(serialize_all = "lowercase")]
+#[sqlx(type_name = "tdxquotestatus", rename_all = "lowercase")]
 pub enum TdxQuoteStatus {
     Pending,
     Failure,

@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 use crate::config::database::{Database, DatabaseTrait};
-use crate::entity::quote::{TdxQuote, TdxQuoteStatus};
+use crate::entity::quote::{ProofType, TdxQuote, TdxQuoteStatus};
 use async_trait::async_trait;
 use sqlx::types::Uuid;
 use crate::error::db_error::DbError;
@@ -19,6 +19,14 @@ pub trait QuoteRepositoryTrait {
         verification_status: Option<TdxQuoteStatus>
     ) -> Vec<TdxQuote>;
     async fn find_by_onchain_request_id(&self, onchain_request_id: Uuid) -> Result<TdxQuote, DbError>;
+    async fn update_status(
+        &self,
+        id: Uuid,
+        proof_type: ProofType,
+        status: TdxQuoteStatus,
+        transaction_hash: Option<Vec<u8>>,
+        prover_request_id: Option<Vec<u8>>
+    ) -> Result<(), DbError>;
 }
 
 #[async_trait]
@@ -59,6 +67,9 @@ impl QuoteRepositoryTrait for QuoteRepository {
             TdxQuote,
             r#"SELECT
             id,
+            proof_type as "proof_type: crate::entity::quote::ProofType",
+            request_id,
+            txn_hash,
             onchain_request_id,
             quote,
             created_at as "created_at: _",
@@ -74,5 +85,48 @@ impl QuoteRepositoryTrait for QuoteRepository {
             DbError::SomethingWentWrong("Failed to fetch quote".to_string())
         })?;
         return Ok(quote);
+    }
+
+    async fn update_status(
+        &self,
+        id: Uuid,
+        proof_type: ProofType,
+        status: TdxQuoteStatus,
+        transaction_hash: Option<Vec<u8>>,
+        _prover_request_id: Option<Vec<u8>>
+    ) -> Result<(), DbError> {
+        tracing::debug!("Updating quote status for id: {} with status: {}", id, status);
+        match transaction_hash {
+            Some(txn_hash) => {
+                sqlx::query!(
+                    r#"UPDATE tdx_quote SET status = $2, txn_hash = $3, proof_type = $4 WHERE id = $1"#,
+                    id,
+                    status as TdxQuoteStatus,
+                    txn_hash,
+                    proof_type as ProofType,
+                )
+                .execute(self.db_conn.get_pool())
+                .await
+                .map_err(|e| {
+                    println!("Failed to update quote status: {}", e);
+                    DbError::SomethingWentWrong("Failed to update quote status".to_string())
+                })?;
+            }
+            None => {
+                sqlx::query!(
+                    r#"UPDATE tdx_quote SET status = $2, proof_type = $3 WHERE id = $1"#,
+                    id,
+                    status as TdxQuoteStatus,
+                    proof_type as ProofType,
+                )
+                .execute(self.db_conn.get_pool())
+                .await
+                .map_err(|e| {
+                    println!("Failed to update quote status: {}", e);
+                    DbError::SomethingWentWrong("Failed to update quote status".to_string())
+                })?;
+            }
+        }
+        Ok(())
     }
 }

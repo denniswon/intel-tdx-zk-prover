@@ -4,6 +4,8 @@ use alloy::{
     sol_types::{SolInterface, SolValue},
 };
 
+use crate::entity::onchain_request::OnchainRequest;
+
 sol! {
     interface IAttestation {
         function verifyAndAttestWithZKProof(
@@ -48,17 +50,16 @@ pub fn generate_attestation_calldata(output: &[u8], proof: &[u8]) -> Vec<u8> {
     .abi_encode()
 }
 
-pub fn generate_prove_calldata(output: &[u8], proof: &[u8]) -> Vec<u8> {
+pub fn generate_prove_calldata(request: &OnchainRequest, output: &[u8], proof: &[u8]) -> Vec<u8> {
     IProve::IProveCalls::proveRequest(
         IProve::proveRequestCall {
             request: RequestConfig {
-                // TODO: fill in with real values
-                nonce: Uint::from(0),
-                creator: "0x0000000000000000000000000000000000000000".parse().unwrap(),
-                operator: "0x0000000000000000000000000000000000000000".parse().unwrap(),
-                model: "0x0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap(),
-                fee: Uint::from(0),
-                deadline: Uint::from(0),
+                nonce: Uint::from(request.nonce),
+                creator: request.creator_address.parse().unwrap(),
+                operator: request.operator_address.parse().unwrap(),
+                model: request.model_id.parse().unwrap(),
+                fee: Uint::from(request.fee_wei),
+                deadline: Uint::from(request.deadline.timestamp()),
             },
             zk_coprocessor_type: ProofType::SP1ZKP,
             proof: Bytes::from(concat_with_length_prefix(output, proof)),

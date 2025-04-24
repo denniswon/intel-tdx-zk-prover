@@ -5,10 +5,18 @@ CREATE TYPE tdxquotestatus AS ENUM (
     'success'
 );
 
+CREATE TYPE prooftype AS ENUM (
+    'risc0',
+    'sp1'
+);
+
 CREATE TABLE tdx_quote (
     id uuid NOT NULL,
     quote bytea NOT NULL,
     onchain_request_id uuid NOT NULL,
+    proof_type prooftype,
+    txn_hash bytea,
+    request_id bytea,
     created_at timestamp with time zone NOT NULL,
     updated_at timestamp with time zone NOT NULL,
     status tdxquotestatus NOT NULL

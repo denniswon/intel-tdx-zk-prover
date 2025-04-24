@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 
-use crate::sp1::chain::attestation::{decode_attestation_ret_data, generate_prove_calldata};
+use crate::entity::onchain_request::OnchainRequest;
+use crate::entity::quote::{ProofType, TdxQuoteStatus};
+use crate::sp1::chain::attestation::{decode_attestation_ret_data, generate_attestation_calldata, generate_prove_calldata};
 use crate::sp1::chain::pccs::enclave_id::{get_enclave_identity, EnclaveIdType};
 use crate::sp1::chain::pccs::fmspc_tcb::get_tcb_info;
 use crate::sp1::chain::pccs::pcs::get_certificate_by_id;
@@ -32,8 +34,22 @@ pub struct DcapProof {
     proof: SP1ProofWithPublicValues,
 }
 
+#[derive(Clone, Validate)]
+pub struct ProofResponse {
+    pub proof: DcapProof,
+    pub proof_type: ProofType,
+    pub prover_request_id: Option<Vec<u8>>,
+}
+
+#[derive(Clone, Validate, Debug)]
+pub struct SubmitProofResponse {
+    pub transaction_hash: Vec<u8>,
+    pub proof_type: ProofType,
+    pub status: TdxQuoteStatus,
+}
+
 // proof_system: [Optional] The proof system to use. Default: Groth16
-pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<DcapProof> {
+pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<ProofResponse> {
     tracing::debug!("Begin fetching the necessary collaterals...");
     // Step 1: Determine quote version and TEE type
     let quote_version = u16::from_le_bytes([quote[0], quote[1]]);
@@ -149,7 +165,7 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
     tracing::debug!("VK: {}", vk.bytes32().to_string().as_str());
     tracing::debug!("Proof: {}", hex::encode(proof.bytes()));
 
-    Ok(DcapProof { output, vk, proof })
+    Ok(ProofResponse { proof: DcapProof { output, vk, proof }, proof_type: ProofType::Sp1, prover_request_id: None })
 }
 
 pub async fn verify_proof(proof: DcapProof) -> Result<VerifiedOutput> {
@@ -166,31 +182,50 @@ pub async fn verify_proof(proof: DcapProof) -> Result<VerifiedOutput> {
     Ok(parsed_output)
 }
 
-pub async fn submit_proof(proof: DcapProof) -> Result<(bool, Vec<u8>)> {
+pub async fn submit_proof(request: OnchainRequest, proof: DcapProof) -> Result<(bool, Vec<u8>, Option<SubmitProofResponse>)> {
     // Send the calldata to Ethereum.
     tracing::info!("Submitting proofs to on-chain DCAP contract to be verified...");
-    let calldata = generate_prove_calldata(&proof.output, &proof.proof.bytes());
-    tracing::info!("Calldata: {}", hex::encode(&calldata));
 
     let tx_sender = TxSender::new(
         parameter::get("DEFAULT_RPC_URL").as_str(),
         parameter::get("DEFAULT_DCAP_CONTRACT").as_str(),
     ).expect("Failed to create txSender");
 
-    // staticcall to the DCAP verifier contract to verify proof
-    let call_output = (tx_sender.call(calldata.clone()).await?).to_vec();
-    tracing::info!("Call output: {}", hex::encode(&call_output));
-    let (chain_verified, chain_raw_verified_output) = decode_attestation_ret_data(call_output);
-    tracing::info!("Chain verified: {}", chain_verified);
-    tracing::info!("Chain raw verified output: {}", hex::encode(&chain_raw_verified_output));
+    let verify_only = parameter::get("VERIFY_ONLY");
 
-    if chain_verified && proof.output == chain_raw_verified_output {
-        tracing::info!("On-chain verification succeed.");
-    } else {
-        tracing::error!("On-chain verification fail!");
+    match verify_only.as_str() {
+        "true" => {
+            tracing::info!("Verify only mode enabled");
+            // staticcall to the Halo prove request contract to verify proof
+            let calldata = generate_attestation_calldata(&proof.output, &proof.proof.bytes());
+            tracing::info!("Calldata: {}", hex::encode(&calldata));
+            let call_output = (tx_sender.call(calldata.clone()).await?).to_vec();
+            tracing::info!("Call output: {}", hex::encode(&call_output));
+            let (chain_verified, chain_raw_verified_output) = decode_attestation_ret_data(call_output);
+            tracing::info!("Chain verified: {}", chain_verified);
+            tracing::info!("Chain raw verified output: {}", hex::encode(&chain_raw_verified_output));
+
+            if chain_verified && proof.output == chain_raw_verified_output {
+                tracing::info!("On-chain verification succeed.");
+            } else {
+                tracing::error!("On-chain verification fail!");
+            }
+            Ok((chain_verified, chain_raw_verified_output, None))
+        },
+        _ => {
+            tracing::info!("Submitting proof transaction...");
+            let calldata = generate_prove_calldata(&request, &proof.output, &proof.proof.bytes());
+            tracing::info!("Calldata: {}", hex::encode(&calldata));
+            // submit proof transaction to Halo contract to verify proof
+            let receipt = tx_sender.send(calldata.clone()).await?;
+            tracing::info!("Transaction receipt: {:#?}", receipt);
+            Ok((true, proof.output, Some(SubmitProofResponse {
+                transaction_hash: receipt.transaction_hash.to_vec(),
+                proof_type: ProofType::Sp1,
+                status: TdxQuoteStatus::Success
+            })))
+        }
     }
-
-    Ok((chain_verified, chain_raw_verified_output))
 }
 
 pub fn deserialize_output(proof: DcapProof) -> VerifiedOutput {

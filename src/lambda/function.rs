@@ -4,11 +4,7 @@ use crate::{
     config::{
         database::{Database, DatabaseTrait},
         parameter,
-    },
-    error::attestation_error::AttestationError,
-    repository::quote_repository::QuoteRepositoryTrait,
-    sp1::prove::{self, submit_proof},
-    state::attestation_state::AttestationState,
+    }, entity::quote::{ProofType, TdxQuoteStatus}, error::attestation_error::AttestationError, repository::{onchain_request_repository::OnchainRequestRepositoryTrait, quote_repository::QuoteRepositoryTrait}, sp1::prove, state::attestation_state::AttestationState
 };
 use aws_lambda_events::eventbridge::EventBridgeEvent;
 use lambda_runtime::{Error, LambdaEvent};
@@ -38,8 +34,10 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
     let state = AttestationState::new(&db_conn);
 
     let attestation = state.quote_repo.find_by_onchain_request_id(request_id).await;
+    let mut quote_id: Uuid = Uuid::nil();
     let result = match attestation {
         Ok(attestation) => {
+            quote_id = attestation.id;
             tracing::info!("Attestation found for request ID: {} {}", request_id, attestation.status);
             let proof = prove::prove(attestation.quote.clone(), None).await;
             match proof {
@@ -61,16 +59,54 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
 
     match result {
         Ok(proof) => {
-            let result = submit_proof(proof).await;
-            match result {
-                Ok((chain_verified, chain_raw_verified_output)) => {
-                    tracing::info!("Proof submitted for request ID: {} chain_verified: {} chain_raw_verified_output: {}",
-                        request_id, chain_verified, hex::encode(&chain_raw_verified_output));
-                    Ok(())
+            let onchain_request = state.onchain_request_repo.find(request_id).await;
+            match onchain_request {
+                Ok(onchain_request) => {
+                    tracing::info!("Onchain request found for request ID: {}", request_id);
+                    tracing::info!("Onchain request: {:?}", onchain_request);
+                    let result: Result<(bool, Vec<u8>, Option<prove::SubmitProofResponse>), anyhow::Error> = prove::submit_proof(onchain_request, proof.proof).await;
+                    match result {
+                        Ok((chain_verified, chain_raw_verified_output, response)) => {
+                            tracing::info!("Proof submitted for request ID: {} chain_verified: {} chain_raw_verified_output: {}",
+                                request_id, chain_verified, hex::encode(&chain_raw_verified_output));
+                            if response.is_some() {
+                                tracing::info!("Submit proof response: {:#?}", response);
+                                let response = response.unwrap();
+                                tracing::info!("Transaction hash: {}", hex::encode(&response.transaction_hash));
+
+                                // Update onchain request status
+                                match state.quote_repo.update_status(
+                                    quote_id,
+                                    response.proof_type,
+                                    response.status,
+                                    Some(response.transaction_hash),
+                                    None,
+                                ).await {
+                                    Ok(_) => tracing::info!("tdx_quote updated successfully {quote_id} {}", response.status),
+                                    Err(e) => tracing::error!("Failed to update quote status on success: {}", e)
+                                }
+                            }
+                            Ok(())
+                        }
+                        Err(e) => {
+                            tracing::error!("Failed to submit proof for request ID: {} {}", request_id, e);
+                            match state.quote_repo.update_status(
+                                quote_id,
+                                ProofType::Sp1,
+                                TdxQuoteStatus::Failure,
+                                None,
+                                None,
+                            ).await {
+                                Ok(_) => tracing::info!("tdx_quote updated successfully {quote_id} {}", TdxQuoteStatus::Failure),
+                                Err(e) => tracing::error!("Failed to update quote status on failure: {}", e)
+                            };
+                            Err(e.into())
+                        }
+                    }
                 }
-                Err(e) => {
-                    tracing::error!("Failed to submit proof for request ID: {}", request_id);
-                    Err(e.into())
+                _ => {
+                    tracing::error!("Failed to fetch onchain request for request ID: {}", request_id);
+                    Err(Box::new(AttestationError::Invalid))
                 }
             }
         }

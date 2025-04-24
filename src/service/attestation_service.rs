@@ -131,7 +131,7 @@ impl AttestationService {
             Ok(attestation) => {
                 let proof = prove(attestation.attestation_data, None).await;
                 match proof {
-                    Ok(proof) => Ok(proof),
+                    Ok(proof) => Ok(proof.proof),
                     _ => Err(AttestationError::Invalid),
                 }
             },
