@@ -127,13 +127,16 @@ class TdxProver(Stack):
                 "FMSPC_TCB_DAO_ADDRESS": "0xd3a3f34e8615065704ccb5c304c0ced41bb81483",
                 "PCS_DAO_ADDRESS": "0xb270cd8550da117e3accec36a90c4b0b48dad342",
                 "PCK_DAO_ADDRESS": "0xa4615c2a260413878241ff7605ad9577feb356a5",
-                "VERIFY_ONLY": "false"
+                "VERIFY_ONLY": "false",
+                "SP1_PROVER": "network",
+                "NETWORK_PRIVATE_KEY": self.service_secrets.secret_value_from_json("NETWORK_PRIVATE_KEY").unsafe_unwrap(),
+                "SQLX_OFFLINE": "false",
             },
             vpc=vpc,
             security_groups=[lambda_security_group],
             log_group=log_group,
-            memory_size=512,  # Increased memory for better performance
-            timeout=Duration.seconds(30),  # Increased timeout for processing
+            memory_size=1024,  # Increased memory for better performance
+            timeout=Duration.seconds(60),  # Increased timeout for processing
         )
 
         # Grant the Lambda function permission to read the secrets
