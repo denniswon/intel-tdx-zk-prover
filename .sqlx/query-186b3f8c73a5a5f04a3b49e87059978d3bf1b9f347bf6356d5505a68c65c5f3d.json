@@ -1,0 +1,104 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                INSERT INTO tdx_quote (onchain_request_id, status, quote)\n                VALUES ($1, $2, decode($3, 'hex'))\n                RETURNING\n                id,\n                onchain_request_id,\n                status as \"status: crate::entity::quote::TdxQuoteStatus\",\n                quote,\n                proof_type as \"proof_type: crate::entity::quote::ProofType\",\n                txn_hash,\n                created_at as \"created_at: _\",\n                updated_at as \"updated_at: _\",\n                request_id as \"request_id: _\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "onchain_request_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "status: crate::entity::quote::TdxQuoteStatus",
+        "type_info": {
+          "Custom": {
+            "name": "tdxquotestatus",
+            "kind": {
+              "Enum": [
+                "pending",
+                "failure",
+                "success"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "quote",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 4,
+        "name": "proof_type: crate::entity::quote::ProofType",
+        "type_info": {
+          "Custom": {
+            "name": "prooftype",
+            "kind": {
+              "Enum": [
+                "risc0",
+                "sp1"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "txn_hash",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 6,
+        "name": "created_at: _",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "updated_at: _",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "request_id: _",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "tdxquotestatus",
+            "kind": {
+              "Enum": [
+                "pending",
+                "failure",
+                "success"
+              ]
+            }
+          }
+        },
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "186b3f8c73a5a5f04a3b49e87059978d3bf1b9f347bf6356d5505a68c65c5f3d"
+}

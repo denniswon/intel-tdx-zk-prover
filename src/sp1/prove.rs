@@ -191,7 +191,8 @@ pub async fn submit_proof(request: OnchainRequest, proof: DcapProof) -> Result<(
     let tx_sender = TxSender::new(
         parameter::get("DEFAULT_RPC_URL").as_str(),
         parameter::get("DEFAULT_DCAP_CONTRACT").as_str(),
-        NamedChain::Base
+        NamedChain::Base,
+        parameter::get("NETWORK_PRIVATE_KEY").as_str()
     ).expect("Failed to create txSender");
 
     let verify_only = parameter::get("VERIFY_ONLY");

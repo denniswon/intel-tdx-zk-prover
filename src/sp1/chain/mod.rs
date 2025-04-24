@@ -13,27 +13,28 @@ use alloy::{
 use alloy_chains::NamedChain;
 use anyhow::Result;
 
-use crate::config::parameter;
-
 pub struct TxSender {
     pub rpc_url: String,
     pub chain: NamedChain,
     pub wallet: EthereumWallet,
+    pub account: Address,
     pub contract: Address,
 }
 
 impl TxSender {
     /// Creates a new `TxSender`.
-    pub fn new(rpc_url: &str, contract: &str, chain: NamedChain) -> Result<Self> {
+    pub fn new(rpc_url: &str, contract: &str, chain: NamedChain, pk: &str) -> Result<Self> {
         let contract = contract.parse::<Address>()?;
 
-        let pk_signer: PrivateKeySigner = parameter::get("NETWORK_PRIVATE_KEY").parse()?;
+        let pk_signer: PrivateKeySigner = pk.parse()?;
+        let account = pk_signer.address();
         let wallet = EthereumWallet::new(pk_signer);
 
         Ok(TxSender {
             chain,
             rpc_url: rpc_url.to_string(),
             wallet,
+            account,
             contract,
         })
     }
@@ -50,10 +51,12 @@ impl TxSender {
             .connect_http(rpc_url);
         let chain_id = provider.get_chain_id().await?;
 
+        let nonce = provider.get_transaction_count(self.account).await?;
         let tx = TransactionRequest::default()
             .with_chain_id(chain_id)
             .with_to(self.contract)
-            .with_nonce(0)
+            .with_from(self.account)
+            .with_nonce(nonce + 1)
             .max_fee_per_gas(20_000_000)
             .max_priority_fee_per_gas(10_000_000)
             .with_gas_limit(10_000_000)
@@ -62,10 +65,14 @@ impl TxSender {
         let tx_envelope = tx.build(&self.wallet).await?;
         let tx_hash = tx_envelope.tx_hash().clone();
         let tx = match provider
-            .send_tx_envelope(tx_envelope)
+            .send_tx_envelope(tx_envelope.clone())
             .await {
                 Ok(tx) => {
-                    tracing::info!("TxSender: Transaction hash: {}", hex::encode(tx_hash));
+                    tracing::info!(
+                        "TxSender: Transaction hash: {} {:#?}",
+                        hex::encode(tx_hash),
+                        tx_envelope.into_typed_transaction()
+                    );
                     Some(tx)
                 },
                 Err(e) => {

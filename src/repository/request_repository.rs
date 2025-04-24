@@ -1,138 +1,79 @@
+#[allow(dead_code)]
 use crate::config::database::{Database, DatabaseTrait};
-use crate::entity::request::{Request, RequestStatus};
-use crate::error::db_error::DbError;
+use crate::entity::onchain_request::OnchainRequest;
 use async_trait::async_trait;
+use sqlx::types::Uuid;
+use crate::error::db_error::DbError;
 use std::sync::Arc;
 
 #[derive(Clone)]
-pub struct RequestRepository {
+pub struct OnchainRequestRepository {
     pub(crate) db_conn: Arc<Database>,
 }
 
 #[async_trait]
-pub trait RequestRepositoryTrait {
+pub trait OnchainRequestRepositoryTrait {
     fn new(db_conn: &Arc<Database>) -> Self;
-    async fn find_all_by_from_address(
-        &self,
-        from_address: String,
-        request_status: Option<RequestStatus>,
-    ) -> Vec<Request>;
-    async fn find_all_by_status(&self, request_status: RequestStatus) -> Vec<Request>;
-    async fn find_all_by_agent_id(
-        &self,
-        agent_id: i32,
-        request_status: Option<RequestStatus>,
-    ) -> Vec<Request>;
-    async fn find(&self, id: u64) -> Result<Request, DbError>;
+    async fn find_all_by_model_id(&self, model_id: String) -> Vec<OnchainRequest>;
+    async fn find(&self, id: Uuid) -> Result<OnchainRequest, DbError>;
 }
 
 #[async_trait]
-impl RequestRepositoryTrait for RequestRepository {
+impl OnchainRequestRepositoryTrait for OnchainRequestRepository {
     fn new(db_conn: &Arc<Database>) -> Self {
         Self {
             db_conn: Arc::clone(db_conn),
         }
     }
 
-    async fn find_all_by_from_address(
-        &self,
-        from_address: String,
-        request_status: Option<RequestStatus>,
-    ) -> Vec<Request> {
-        match request_status {
-            Some(status) => sqlx::query_as!(
-                Request,
-                r#"SELECT
-                id,
-                agent_id,
-                from_address,
-                request_data,
-                request_status as "request_status: _",
-                created_at as "created_at: _"
-                FROM requests
-                WHERE from_address = $1 AND request_status = $2"#,
-                from_address,
-                status as RequestStatus
-            )
-            .fetch_all(self.db_conn.get_pool())
-            .await
-            .unwrap_or(vec![]),
-            None => sqlx::query_as!(
-                Request,
-                r#"SELECT
-                id,
-                agent_id,
-                from_address,
-                request_data,
-                request_status as "request_status: _",
-                created_at as "created_at: _"
-                FROM requests
-                WHERE from_address = $1"#,
-                from_address
-            )
-            .fetch_all(self.db_conn.get_pool())
-            .await
-            .unwrap_or(vec![]),
-        }
-    }
-
-    async fn find_all_by_agent_id(
-        &self,
-        agent_id: i32,
-        request_status: Option<RequestStatus>,
-    ) -> Vec<Request> {
-        match request_status {
-            Some(status) => {
-                let requests = sqlx::query_as::<_, Request>(
-                    "SELECT * FROM requests WHERE agent_id = $1 AND request_status = $2",
-                )
-                .bind(agent_id)
-                .bind(status)
-                .fetch_all(self.db_conn.get_pool())
-                .await
-                .unwrap_or(vec![]);
-                return requests;
-            }
-            None => {
-                let requests =
-                    sqlx::query_as::<_, Request>("SELECT * FROM requests WHERE agent_id = $1")
-                        .bind(agent_id)
-                        .fetch_all(self.db_conn.get_pool())
-                        .await
-                        .unwrap_or(vec![]);
-                return requests;
-            }
-        }
-    }
-
-    async fn find_all_by_status(&self, request_status: RequestStatus) -> Vec<Request> {
-        let requests =
-            sqlx::query_as::<_, Request>("SELECT * FROM requests WHERE request_status = $1")
-                .bind(request_status)
-                .fetch_all(self.db_conn.get_pool())
-                .await
-                .unwrap_or(vec![]);
-        return requests;
-    }
-
-    async fn find(&self, id: u64) -> Result<Request, DbError> {
-        let request = sqlx::query_as!(
-            Request,
+    async fn find_all_by_model_id(&self, model_id: String) -> Vec<OnchainRequest> {
+        let onchain_requests = sqlx::query_as!(
+            OnchainRequest,
             r#"SELECT
             id,
-            agent_id,
-            from_address,
-            request_data,
-            request_status as "request_status: _",
-            created_at as "created_at: _"
-            FROM requests WHERE id = $1"#,
-            id as i32,
-        )
-        .fetch_one(self.db_conn.get_pool())
-        .await;
-        match request {
-            Ok(request) => Ok(request),
-            Err(e) => Err(DbError::SomethingWentWrong(e.to_string())),
-        }
+            creator_address,
+            operator_address,
+            model_id,
+            fee_wei,
+            nonce,
+            request_id,
+            deadline,
+            is_cancelled,
+            cancelled_at,
+            created_at as "created_at: _",
+            updated_at as "updated_at: _"
+            FROM onchain_request WHERE model_id = $1"#,
+            model_id
+        ).fetch_all(self.db_conn.get_pool())
+        .await
+        .unwrap_or(vec![]);
+        return onchain_requests;
+    }
+
+    async fn find(&self, id: Uuid) -> Result<OnchainRequest, DbError> {
+        let onchain_request = sqlx::query_as!(
+            OnchainRequest,
+            r#"SELECT
+            id,
+            creator_address,
+            operator_address,
+            model_id,
+            fee_wei,
+            nonce,
+            request_id,
+            deadline,
+            is_cancelled,
+            cancelled_at,
+            created_at as "created_at: _",
+            updated_at as "updated_at: _"
+            FROM onchain_request WHERE id = $1"#,
+            id
+        ).fetch_one(self.db_conn.get_pool())
+        .await
+        .map_err(|e| {
+            println!("Failed to fetch onchain request: {}", e);
+            DbError::SomethingWentWrong("Failed to fetch onchain request".to_string())
+        })?;
+        return Ok(onchain_request);
     }
 }

@@ -6,21 +6,21 @@ use axum::{
 use thiserror::Error;
 
 #[derive(Error, Debug)]
-pub enum AgentError {
-    #[error("Agent not found")]
+pub enum QuoteError {
+    #[error("Quote not found")]
     NotFound,
-    #[error("Agent invalid")]
+    #[error("Quote invalid")]
     Invalid,
-    #[error("Agent unauthorized")]
+    #[error("Quote unauthorized")]
     Unauthorized,
 }
 
-impl IntoResponse for AgentError {
+impl IntoResponse for QuoteError {
     fn into_response(self) -> Response {
         let status_code = match self {
-            AgentError::NotFound => StatusCode::NOT_FOUND,
-            AgentError::Invalid => StatusCode::BAD_REQUEST,
-            AgentError::Unauthorized => StatusCode::UNAUTHORIZED,
+            QuoteError::NotFound => StatusCode::NOT_FOUND,
+            QuoteError::Invalid => StatusCode::BAD_REQUEST,
+            QuoteError::Unauthorized => StatusCode::UNAUTHORIZED,
         };
 
         ApiErrorResponse::send(status_code.as_u16(), Some(self.to_string()))

@@ -1,6 +1,5 @@
 use crate::config::database::Database;
-use crate::state::agent_state::AgentState;
-use crate::state::attestation_state::AttestationState;
+use crate::state::quote_state::QuoteState;
 use crate::state::request_state::RequestState;
 use axum::body::Bytes;
 use axum::routing::{IntoMakeService, get};
@@ -11,18 +10,16 @@ use std::time::Duration;
 use tower_http::LatencyUnit;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 
-use super::{agent, attestation, request};
+use super::{quote, request};
 
 pub fn routes(db_conn: Arc<Database>) -> IntoMakeService<Router> {
     let merged_router = {
-        let agent_state = AgentState::new(&db_conn);
-        let attestation_state = AttestationState::new(&db_conn);
+        let quote_state = QuoteState::new(&db_conn);
         let request_state = RequestState::new(&db_conn);
 
         request::routes()
             .with_state(request_state)
-            .merge(agent::routes().with_state(agent_state))
-            .merge(attestation::routes().with_state(attestation_state))
+            .merge(quote::routes().with_state(quote_state))
             .merge(Router::new().route("/health", get(|| async { "Healthy..." })))
     };
 
