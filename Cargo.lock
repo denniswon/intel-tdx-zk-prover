@@ -6905,6 +6905,7 @@ dependencies = [
  "lambda_runtime",
  "mockall",
  "openssl",
+ "rand 0.9.1",
  "serde",
  "serde_json",
  "sp1-helper",

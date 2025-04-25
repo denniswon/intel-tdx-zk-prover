@@ -15,7 +15,7 @@ use alloy::{
 };
 use alloy_chains::NamedChain;
 use anyhow::Result;
-use tower::retry::backoff;
+use rand::prelude::*;
 
 pub struct TxSender {
     pub rpc_url: String,
@@ -95,13 +95,14 @@ impl TxSender {
         let mut transaction_hash: Option<TxHash> = None;
 
         loop {
+            nonce += rand::rng().random_range(..5u64);
             tracing::info!("Account nonce: {}", nonce);
             tracing::info!("Max fee per gas: {:#?}", max_fee_per_gas);
             tracing::info!("Max priority fee per gas: {:#?}", max_priority_fee_per_gas);
             tracing::info!("Gas limit: {}", gas_limit);
 
             let tx = tx_request.clone()
-                .with_nonce(nonce + 1)
+                .with_nonce(nonce)
                 .max_fee_per_gas(max_fee_per_gas)
                 .max_priority_fee_per_gas(max_priority_fee_per_gas)
                 .with_gas_limit(gas_limit);
