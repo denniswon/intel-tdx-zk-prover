@@ -19,7 +19,7 @@ use rand::prelude::*;
 
 pub struct TxSender {
     pub rpc_url: String,
-    pub chain: NamedChain,
+    pub chain: Option<NamedChain>,
     pub wallet: EthereumWallet,
     pub account: Address,
     pub contract: Address,
@@ -27,7 +27,7 @@ pub struct TxSender {
 
 impl TxSender {
     /// Creates a new `TxSender`.
-    pub fn new(rpc_url: &str, contract: &str, chain: NamedChain, pk: &str) -> Result<Self> {
+    pub fn new(rpc_url: &str, contract: &str, chain: Option<NamedChain>, pk: &str) -> Result<Self> {
         let contract = contract.parse::<Address>()?;
 
         let pk_signer: PrivateKeySigner = pk.parse()?;
@@ -47,12 +47,19 @@ impl TxSender {
     pub async fn send(&self, calldata: Vec<u8>) -> Result<(TxHash, Option<TransactionReceipt>)> {
         let rpc_url = self.rpc_url.parse()?;
 
-        let provider = ProviderBuilder::new()
-            .wallet(self.wallet.clone())
-            .with_chain(self.chain)
-            .with_cached_nonce_management()
-            .with_gas_estimation()
-            .connect_http(rpc_url);
+        let provider = match self.chain {
+            Some(chain) => ProviderBuilder::new()
+                .wallet(self.wallet.clone())
+                .with_chain(chain)
+                .with_cached_nonce_management()
+                .with_gas_estimation()
+                .connect_http(rpc_url),
+            None => ProviderBuilder::new()
+                .wallet(self.wallet.clone())
+                .with_cached_nonce_management()
+                .with_gas_estimation()
+                .connect_http(rpc_url),
+        };
 
         let chain_id = provider.get_chain_id().await?;
         
@@ -120,22 +127,11 @@ impl TxSender {
                     },
                     Err(e) => {
                         tracing::error!("TxSender: Failed to send transaction: {} {}", e, tx_hash);
-                        if e.as_error_resp().unwrap().code == -32603 {
-                            tracing::info!("TxSender: Retrying transaction");
-
-                            nonce += 1;
-                            max_fee_per_gas = (max_fee_per_gas as f64 * multiplier) as u128;
-                            max_priority_fee_per_gas = (max_priority_fee_per_gas as f64 * multiplier) as u128;
-                            gas_limit = (gas_limit as f64 * multiplier) as u64;
-
-                            max_retries -= 1;
-
-                            let backoff = Duration::from_millis(500);
-                            thread::sleep(backoff);
-                        } else {
-                            tracing::info!("TxSender: Not retriable error. Skipping retrying transaction: {} {}", e, tx_hash);
-                            max_retries = 0;
-                        }
+                        nonce += 1;
+                        max_fee_per_gas = (max_fee_per_gas as f64 * multiplier) as u128;
+                        max_priority_fee_per_gas = (max_priority_fee_per_gas as f64 * multiplier) as u128;
+                        gas_limit = (gas_limit as f64 * multiplier) as u64;
+                        max_retries -= 1;
                         None
                     }
                 };
@@ -147,6 +143,10 @@ impl TxSender {
             } else if max_retries == 0 {
                 break;
             }
+
+            tracing::info!("TxSender: Retrying transaction. {} retries left", max_retries);
+            let backoff = Duration::from_millis(500);
+            thread::sleep(backoff);
         }
 
         match pending_tx {

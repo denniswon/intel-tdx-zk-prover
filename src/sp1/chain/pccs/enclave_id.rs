@@ -1,6 +1,9 @@
+use std::str::FromStr;
+
 use anyhow::Result;
 
-use crate::config::parameter;
+use crate::sp1::constants::AUTOMATA_ENCLAVE_ID_DAO_ADDRESS;
+use crate::{config::parameter, sp1::constants::AUTOMATA_DEFAULT_RPC_URL};
 use crate::sp1::utils::remove_prefix_if_found;
 
 use alloy::{
@@ -32,11 +35,21 @@ pub enum EnclaveIdType {
 }
 
 pub async fn get_enclave_identity(id: EnclaveIdType, version: u32) -> Result<Vec<u8>> {
-    let rpc_url = parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL");
+    let verify_only = parameter::get("VERIFY_ONLY");
+    let rpc_url = if verify_only == "true" {
+        AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL")
+    } else {
+        parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
+    };
     let provider = ProviderBuilder::new().connect_http(rpc_url);
 
+    let enclave_id_dao_address = if verify_only == "true" {
+        Address::from_str(AUTOMATA_ENCLAVE_ID_DAO_ADDRESS).unwrap()
+    } else {
+        parameter::get("ENCLAVE_ID_DAO_ADDRESS").parse::<Address>().unwrap()
+    };
     let enclave_id_dao_contract = IEnclaveIdentityDao::new(
-        parameter::get("ENCLAVE_ID_DAO_ADDRESS").parse::<Address>().unwrap(),
+        enclave_id_dao_address,
         &provider,
     );
 
