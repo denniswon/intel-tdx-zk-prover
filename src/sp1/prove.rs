@@ -9,6 +9,7 @@ use crate::sp1::chain::pccs::pcs::get_certificate_by_id;
 use crate::sp1::chain::pccs::pcs::IPCSDao::CA;
 use crate::sp1::chain::TxSender;
 use crate::config::parameter;
+use crate::sp1::constants::{AUTOMATA_DEFAULT_DCAP_CONTRACT, AUTOMATA_DEFAULT_RPC_URL};
 use crate::sp1::parser::get_pck_fmspc_and_issuer;
 
 use alloy::primitives::TxHash;
@@ -35,6 +36,19 @@ pub struct DcapProof {
     proof_output: Vec<u8>,
     vk: SP1VerifyingKey,
     proof: SP1ProofWithPublicValues,
+}
+
+impl std::fmt::Debug for DcapProof {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "DcapProof {{ exec_output: {:?}, proof_output: {:?}, vk: {:?}, proof: {:?} }}",
+            self.exec_output,
+            self.proof_output,
+            self.vk.bytes32(),
+            self.proof
+        )
+    }
 }
 
 #[derive(Clone, Validate)]
@@ -194,18 +208,19 @@ pub async fn submit_proof(
     // Send the calldata to Ethereum.
     tracing::info!("Submitting proofs to on-chain DCAP contract to be verified...");
 
-    let tx_sender = TxSender::new(
-        parameter::get("DEFAULT_RPC_URL").as_str(),
-        parameter::get("DEFAULT_DCAP_CONTRACT").as_str(),
-        NamedChain::Base,
-        parameter::get("NETWORK_PRIVATE_KEY").as_str()
-    ).expect("Failed to create txSender");
-
     let verify_only = parameter::get("VERIFY_ONLY");
 
     match verify_only.as_str() {
         "true" => {
             tracing::info!("Verify only mode enabled");
+
+            let tx_sender = TxSender::new(
+                AUTOMATA_DEFAULT_RPC_URL,
+                AUTOMATA_DEFAULT_DCAP_CONTRACT,
+                None,
+                Some(parameter::get("PROVER_PRIVATE_KEY").as_str())
+            ).expect("Failed to create txSender");
+
             // staticcall to the Halo prove request contract to verify proof
             let calldata = generate_attestation_calldata(&proof.exec_output, &proof.proof.bytes());
             tracing::info!("Calldata: {}", hex::encode(&calldata));
@@ -224,6 +239,14 @@ pub async fn submit_proof(
         },
         _ => {
             tracing::info!("Submitting proof transaction...");
+
+            let tx_sender = TxSender::new(
+                parameter::get("DEFAULT_RPC_URL").as_str(),
+                parameter::get("DEFAULT_DCAP_CONTRACT").as_str(),
+                Some(NamedChain::Base),
+                Some(parameter::get("PROVER_PRIVATE_KEY").as_str())
+            ).expect("Failed to create txSender");
+
             let calldata = generate_prove_calldata(&request, &proof.exec_output, &proof.proof.bytes());
             tracing::info!("Calldata: {}", hex::encode(&calldata));
             // submit proof transaction to Halo contract to verify proof

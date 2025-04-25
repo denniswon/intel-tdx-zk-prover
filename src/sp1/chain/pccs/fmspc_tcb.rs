@@ -1,6 +1,9 @@
+use std::str::FromStr;
+
 use anyhow::Result;
 
-use crate::config::parameter;
+use crate::sp1::constants::AUTOMATA_DEFAULT_RPC_URL;
+use crate::{config::parameter, sp1::constants::AUTOMATA_FMSPC_TCB_DAO_ADDRESS};
 use crate::sp1::utils::remove_prefix_if_found;
 
 use alloy::{
@@ -24,11 +27,23 @@ sol! {
 }
 
 pub async fn get_tcb_info(tcb_type: u8, fmspc: &str, version: u32) -> Result<Vec<u8>> {
-    let rpc_url = parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL");
+    let verify_only = parameter::get("VERIFY_ONLY");
+    let rpc_url = if verify_only == "true" {
+        AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL")
+    } else {
+        parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
+    };
     let provider = ProviderBuilder::new().connect_http(rpc_url);
 
     let fmspc_tcb_dao_contract =
-        IFmspcTcbDao::new(parameter::get("FMSPC_TCB_DAO_ADDRESS").parse::<Address>().unwrap(), &provider);
+        IFmspcTcbDao::new(
+            if verify_only == "true" {
+                Address::from_str(AUTOMATA_FMSPC_TCB_DAO_ADDRESS).unwrap()
+            } else {
+                parameter::get("FMSPC_TCB_DAO_ADDRESS").parse::<Address>().unwrap()
+            },
+            &provider
+        );
 
     let call_builder = fmspc_tcb_dao_contract.getTcbInfo(
         U256::from(tcb_type),

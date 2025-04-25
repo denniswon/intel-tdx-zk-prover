@@ -1,6 +1,8 @@
+use std::str::FromStr;
+
 use anyhow::Result;
 
-use crate::config::parameter;
+use crate::{config::parameter, sp1::constants::{AUTOMATA_DEFAULT_RPC_URL, AUTOMATA_PCS_DAO_ADDRESS}};
 
 use alloy::{primitives::Address, providers::ProviderBuilder, sol};
 
@@ -21,10 +23,22 @@ sol! {
 }
 
 pub async fn get_certificate_by_id(ca_id: IPCSDao::CA) -> Result<(Vec<u8>, Vec<u8>)> {
-    let rpc_url = parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL");
+    let verify_only = parameter::get("VERIFY_ONLY");
+    let rpc_url = if verify_only == "true" {
+        AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL")
+    } else {
+        parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
+    };
     let provider = ProviderBuilder::new().connect_http(rpc_url);
 
-    let pcs_dao_contract = IPCSDao::new(parameter::get("PCS_DAO_ADDRESS").parse::<Address>().unwrap(), &provider);
+    let pcs_dao_contract = IPCSDao::new(
+        if verify_only == "true" {
+            Address::from_str(AUTOMATA_PCS_DAO_ADDRESS).unwrap()
+        } else {
+            parameter::get("PCS_DAO_ADDRESS").parse::<Address>().unwrap()
+        },
+        &provider
+    );
 
     let call_builder = pcs_dao_contract.getCertificateById(ca_id);
 

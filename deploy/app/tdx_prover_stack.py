@@ -130,6 +130,7 @@ class TdxProver(Stack):
                 "VERIFY_ONLY": "false",
                 "SP1_PROVER": "network",
                 "NETWORK_PRIVATE_KEY": self.service_secrets.secret_value_from_json("NETWORK_PRIVATE_KEY").unsafe_unwrap(),
+                "PROVER_PRIVATE_KEY": self.service_secrets.secret_value_from_json("PROVER_PRIVATE_KEY").unsafe_unwrap(),
                 "SQLX_OFFLINE": "false",
             },
             vpc=vpc,
