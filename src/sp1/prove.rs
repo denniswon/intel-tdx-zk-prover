@@ -218,7 +218,7 @@ pub async fn submit_proof(
                 AUTOMATA_DEFAULT_RPC_URL,
                 AUTOMATA_DEFAULT_DCAP_CONTRACT,
                 None,
-                parameter::get("NETWORK_PRIVATE_KEY").as_str()
+                Some(parameter::get("PROVER_PRIVATE_KEY").as_str())
             ).expect("Failed to create txSender");
 
             // staticcall to the Halo prove request contract to verify proof
@@ -244,7 +244,7 @@ pub async fn submit_proof(
                 parameter::get("DEFAULT_RPC_URL").as_str(),
                 parameter::get("DEFAULT_DCAP_CONTRACT").as_str(),
                 Some(NamedChain::Base),
-                parameter::get("NETWORK_PRIVATE_KEY").as_str()
+                Some(parameter::get("PROVER_PRIVATE_KEY").as_str())
             ).expect("Failed to create txSender");
 
             let calldata = generate_prove_calldata(&request, &proof.exec_output, &proof.proof.bytes());
