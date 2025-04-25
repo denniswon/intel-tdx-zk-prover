@@ -3,7 +3,10 @@
 pub mod attestation;
 pub mod pccs;
 
+use std::{cmp::max, thread, time::Duration};
+
 use alloy::{
+    eips::eip1559::Eip1559Estimation,
     network::{Ethereum, EthereumWallet, TransactionBuilder},
     primitives::{Address, Bytes, TxHash},
     providers::{PendingTransactionBuilder, Provider, ProviderBuilder},
@@ -12,6 +15,7 @@ use alloy::{
 };
 use alloy_chains::NamedChain;
 use anyhow::Result;
+use tower::retry::backoff;
 
 pub struct TxSender {
     pub rpc_url: String,
@@ -58,42 +62,77 @@ impl TxSender {
             .with_from(self.account)
             .with_input(calldata);
 
-        let mut nonce = provider.get_transaction_count(self.account).await?;
-        let mut multiplier = 1.0;
-        let mut max_retries = 2;
+        let mut nonce = provider.get_transaction_count(self.account).await? + 1;
+        let mut gas_limit = match provider.estimate_gas(tx_request.clone()).await {
+            Ok(gas_limit) => max((gas_limit as f64 * 1.5) as u64, 20_000_000),
+            Err(e) => {
+                tracing::warn!("Failed to estimate gas: {}", e);
+                20_000_000
+            }
+        };
+        let max_fee_per_gas = match provider.estimate_eip1559_fees().await {
+            Ok(max_fee_per_gas) => {
+                Eip1559Estimation {
+                    max_fee_per_gas: max((max_fee_per_gas.max_fee_per_gas as f64 * 1.5) as u128, 10_000_000),
+                    max_priority_fee_per_gas: max((max_fee_per_gas.max_priority_fee_per_gas as f64 * 1.5) as u128, 1_000_000)
+                }
+            },
+            Err(e) => {
+                tracing::warn!("Failed to estimate max fee per gas: {}", e);
+                Eip1559Estimation {
+                    max_fee_per_gas: 10_000_000,
+                    max_priority_fee_per_gas: 1_000_000
+                }
+            }
+        };
+        let mut max_priority_fee_per_gas = max_fee_per_gas.max_priority_fee_per_gas;
+        let mut max_fee_per_gas = max_fee_per_gas.max_fee_per_gas;
+
+        let multiplier = 1.2;
+        let mut max_retries = 3;
 
         let mut pending_tx: Option<PendingTransactionBuilder<Ethereum>> = None;
         let mut transaction_hash: Option<TxHash> = None;
+
         loop {
-            nonce += 1;
-            let gas_limit = provider.estimate_gas(tx_request.clone()).await?;
-            let max_fee_per_gas = provider.estimate_eip1559_fees().await?;
+            tracing::info!("Account nonce: {}", nonce);
+            tracing::info!("Max fee per gas: {:#?}", max_fee_per_gas);
+            tracing::info!("Max priority fee per gas: {:#?}", max_priority_fee_per_gas);
+            tracing::info!("Gas limit: {}", gas_limit);
 
             let tx = tx_request.clone()
-                .with_nonce(nonce)
-                .max_fee_per_gas((max_fee_per_gas.max_fee_per_gas as f64 * multiplier) as u128)
-                .max_priority_fee_per_gas((max_fee_per_gas.max_priority_fee_per_gas as f64 * multiplier) as u128)
-                .with_gas_limit((gas_limit as f64 * multiplier) as u64);
+                .with_nonce(nonce + 1)
+                .max_fee_per_gas(max_fee_per_gas)
+                .max_priority_fee_per_gas(max_priority_fee_per_gas)
+                .with_gas_limit(gas_limit);
 
             let tx_envelope = tx.build(&self.wallet).await?;
             let tx_hash = tx_envelope.tx_hash().clone();
-            
+
             let tx = match provider
                 .send_tx_envelope(tx_envelope.clone())
                 .await {
                     Ok(tx) => {
                         tracing::info!("TxSender: Transaction hash: {}", tx_hash);
-                        tracing::debug!("TxSender: Transaction: {:#?}", tx_envelope.into_typed_transaction());
-                        Some(tx)
+                        tracing::info!("TxSender: Transaction: {:#?}", tx_envelope.into_typed_transaction());
+                        Some(tx.with_timeout(Some(Duration::from_secs(120))))
                     },
                     Err(e) => {
-                        tracing::error!("Failed to send transaction: {} {}", e, tx_hash);
+                        tracing::error!("TxSender: Failed to send transaction: {} {}", e, tx_hash);
                         if e.as_error_resp().unwrap().code == -32603 {
-                            tracing::info!("Retrying transaction");
-                            multiplier *= 1.1;
+                            tracing::info!("TxSender: Retrying transaction");
+
+                            nonce += 1;
+                            max_fee_per_gas = (max_fee_per_gas as f64 * multiplier) as u128;
+                            max_priority_fee_per_gas = (max_priority_fee_per_gas as f64 * multiplier) as u128;
+                            gas_limit = (gas_limit as f64 * multiplier) as u64;
+
                             max_retries -= 1;
+
+                            let backoff = Duration::from_millis(500);
+                            thread::sleep(backoff);
                         } else {
-                            tracing::info!("Not retriable error. Skipping retrying transaction: {} {}", e, tx_hash);
+                            tracing::info!("TxSender: Not retriable error. Skipping retrying transaction: {} {}", e, tx_hash);
                             max_retries = 0;
                         }
                         None
@@ -107,16 +146,26 @@ impl TxSender {
             } else if max_retries == 0 {
                 break;
             }
-        };
+        }
 
         match pending_tx {
             Some(tx) => {
+                tracing::info!("TxSender: Waiting for transaction receipt: {}", transaction_hash.unwrap());
                 match tx.get_receipt().await {
-                    Ok(receipt) => Ok((transaction_hash.unwrap(), Some(receipt))),
-                    Err(_) => Ok((transaction_hash.unwrap(), None))
+                    Ok(receipt) => {
+                        tracing::info!("TxSender: Transaction receipt received: {}", transaction_hash.unwrap());
+                        Ok((transaction_hash.unwrap(), Some(receipt)))
+                    },
+                    Err(e) => {
+                        tracing::error!("TxSender: Failed to get transaction receipt: {} {}", transaction_hash.unwrap(), e);
+                        Ok((transaction_hash.unwrap(), None))
+                    }
                 }
             },
-            None => Ok((transaction_hash.unwrap(), None))
+            None => {
+                tracing::error!("TxSender: Failed to send transaction. Aborting: {}", transaction_hash.unwrap());
+                Ok((transaction_hash.unwrap(), None))
+            }
         }
     }
 
