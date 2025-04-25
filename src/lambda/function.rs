@@ -71,6 +71,10 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
                 Ok(onchain_request) => {
                     tracing::info!("Onchain request found for request ID: {}", request_id);
                     tracing::info!("Onchain request: {:?}", onchain_request);
+
+                    tracing::info!("Verifying proof...");
+                    let _ = prove::verify_proof(proof.proof.clone()).await;
+
                     let result: Result<(bool, Vec<u8>, Option<TxHash>, Option<prove::SubmitProofResponse>), anyhow::Error> =
                         prove::submit_proof(onchain_request, proof.proof).await;
                     match result {

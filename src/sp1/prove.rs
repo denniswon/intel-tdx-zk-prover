@@ -31,7 +31,8 @@ pub enum ProofSystem {
 
 #[derive(Clone, Serialize, Deserialize, Validate)]
 pub struct DcapProof {
-    output: Vec<u8>,
+    exec_output: Vec<u8>,
+    proof_output: Vec<u8>,
     vk: SP1VerifyingKey,
     proof: SP1ProofWithPublicValues,
 }
@@ -167,7 +168,9 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
     tracing::debug!("VK: {}", vk.bytes32().to_string().as_str());
     tracing::debug!("Proof: {}", hex::encode(proof.bytes()));
 
-    Ok(ProofResponse { proof: DcapProof { output, vk, proof }, proof_type: ProofType::Sp1, prover_request_id: None })
+    let dcap_proof = DcapProof { exec_output: ret_slice.to_vec(), proof_output: output, vk, proof };
+
+    Ok(ProofResponse { proof: dcap_proof, proof_type: ProofType::Sp1, prover_request_id: None })
 }
 
 pub async fn verify_proof(proof: DcapProof) -> Result<VerifiedOutput> {
@@ -177,14 +180,17 @@ pub async fn verify_proof(proof: DcapProof) -> Result<VerifiedOutput> {
     client
         .verify(&proof.proof, &proof.vk)
         .expect("Failed to verify proof");
-    println!("Successfully verified proof.");
+    tracing::info!("Successfully verified proof.");
 
-    let parsed_output = VerifiedOutput::from_bytes(&proof.output);
-    println!("{:?}", parsed_output);
+    let parsed_output = VerifiedOutput::from_bytes(&proof.proof_output);
+    tracing::info!("{:?}", parsed_output);
     Ok(parsed_output)
 }
 
-pub async fn submit_proof(request: OnchainRequest, proof: DcapProof) -> Result<(bool, Vec<u8>, Option<TxHash>, Option<SubmitProofResponse>)> {
+pub async fn submit_proof(
+    request: OnchainRequest,
+    proof: DcapProof,
+) -> Result<(bool, Vec<u8>, Option<TxHash>, Option<SubmitProofResponse>)> {
     // Send the calldata to Ethereum.
     tracing::info!("Submitting proofs to on-chain DCAP contract to be verified...");
 
@@ -201,7 +207,7 @@ pub async fn submit_proof(request: OnchainRequest, proof: DcapProof) -> Result<(
         "true" => {
             tracing::info!("Verify only mode enabled");
             // staticcall to the Halo prove request contract to verify proof
-            let calldata = generate_attestation_calldata(&proof.output, &proof.proof.bytes());
+            let calldata = generate_attestation_calldata(&proof.exec_output, &proof.proof.bytes());
             tracing::info!("Calldata: {}", hex::encode(&calldata));
             let call_output = (tx_sender.call(calldata.clone()).await?).to_vec();
             tracing::info!("Call output: {}", hex::encode(&call_output));
@@ -209,7 +215,7 @@ pub async fn submit_proof(request: OnchainRequest, proof: DcapProof) -> Result<(
             tracing::info!("Chain verified: {}", chain_verified);
             tracing::info!("Chain raw verified output: {}", hex::encode(&chain_raw_verified_output));
 
-            if chain_verified && proof.output == chain_raw_verified_output {
+            if chain_verified && proof.proof_output == chain_raw_verified_output {
                 tracing::info!("On-chain verification succeed.");
             } else {
                 tracing::error!("On-chain verification fail!");
@@ -218,7 +224,7 @@ pub async fn submit_proof(request: OnchainRequest, proof: DcapProof) -> Result<(
         },
         _ => {
             tracing::info!("Submitting proof transaction...");
-            let calldata = generate_prove_calldata(&request, &proof.output, &proof.proof.bytes());
+            let calldata = generate_prove_calldata(&request, &proof.exec_output, &proof.proof.bytes());
             tracing::info!("Calldata: {}", hex::encode(&calldata));
             // submit proof transaction to Halo contract to verify proof
             match tx_sender.send(calldata.clone()).await {
@@ -227,20 +233,20 @@ pub async fn submit_proof(request: OnchainRequest, proof: DcapProof) -> Result<(
                     tracing::info!("Transaction receipt: {:#?}", receipt);
                     match receipt {
                         Some(_receipt) => {
-                            Ok((true, proof.output, Some(tx_hash), Some(SubmitProofResponse {
+                            Ok((true, proof.proof_output, Some(tx_hash), Some(SubmitProofResponse {
                                 transaction_hash: tx_hash,
                                 proof_type: ProofType::Sp1,
                                 status: TdxQuoteStatus::Success
                             })))
                         },
                         None => {
-                            Ok((false, proof.output, Some(tx_hash), None))
+                            Ok((false, proof.proof_output, Some(tx_hash), None))
                         }
                     }
                 },
                 Err(e) => {
                     tracing::error!("Failed to submit proof transaction: {}", e);
-                    Ok((false, proof.output, None, None))
+                    Ok((false, proof.proof_output, None, None))
                 }
             }
         }
@@ -248,7 +254,7 @@ pub async fn submit_proof(request: OnchainRequest, proof: DcapProof) -> Result<(
 }
 
 pub fn deserialize_output(proof: DcapProof) -> VerifiedOutput {
-    let deserialized_output = VerifiedOutput::from_bytes(&proof.output);
+    let deserialized_output = VerifiedOutput::from_bytes(&proof.proof_output);
     println!("Deserialized output: {:?}", deserialized_output);
     deserialized_output
 }

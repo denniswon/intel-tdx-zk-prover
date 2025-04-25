@@ -21,6 +21,7 @@ hyper = "1.6.0"
 lambda_runtime = "0.13.0"
 mockall = "0.13.1"
 openssl = { version = "0.10.72", features = ["vendored"] }
+rand = "0.9.1"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 sp1-sdk = "^4.1.0"
