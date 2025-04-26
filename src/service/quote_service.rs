@@ -1,11 +1,12 @@
 use crate::config::database::{Database, DatabaseTrait};
 use crate::dto::quote_dto::QuoteRegisterDto;
-use crate::entity::quote::{QuoteType, TdxQuote, TdxQuoteStatus};
+use crate::entity::quote::{ProofType, QuoteType, TdxQuote, TdxQuoteStatus};
+use crate::entity::zk::DcapProof;
 use crate::error::api_error::ApiError;
 use crate::error::db_error::DbError;
 use crate::error::quote_error::QuoteError;
 use crate::repository::quote_repository::{QuoteRepository, QuoteRepositoryTrait};
-use crate::sp1::prove::{prove, verify_proof, DcapProof};
+use crate::zk::{prove, verify_proof};
 
 use dcap_rs::types::quotes::version_4::QuoteV4;
 use dcap_rs::types::VerifiedOutput;
@@ -140,7 +141,7 @@ impl QuoteService {
 
         match quote {
             Ok(quote) => {
-                let proof = prove(quote.quote, None).await;
+                let proof = prove(quote.quote, ProofType::Sp1, None).await;
                 match proof {
                     Ok(proof) => Ok(proof.proof),
                     _ => Err(QuoteError::Invalid),

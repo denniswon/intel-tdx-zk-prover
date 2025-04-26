@@ -33,7 +33,7 @@ pub async fn get_tcb_info(tcb_type: u8, fmspc: &str, version: u32) -> Result<Vec
     } else {
         parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
     };
-    let provider = ProviderBuilder::new().connect_http(rpc_url);
+    let provider = ProviderBuilder::new().connect(rpc_url);
 
     let fmspc_tcb_dao_contract =
         IFmspcTcbDao::new(

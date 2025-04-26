@@ -2,7 +2,7 @@ use alloy::{
     primitives::{Bytes, Uint}, sol, sol_types::{SolInterface, SolValue}
 };
 
-use crate::entity::onchain_request::OnchainRequest;
+use crate::entity::request::OnchainRequest;
 
 sol! {
     interface IAttestation {

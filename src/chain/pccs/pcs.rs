@@ -29,7 +29,7 @@ pub async fn get_certificate_by_id(ca_id: IPCSDao::CA) -> Result<(Vec<u8>, Vec<u
     } else {
         parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
     };
-    let provider = ProviderBuilder::new().connect_http(rpc_url);
+    let provider = ProviderBuilder::new().connect(rpc_url);
 
     let pcs_dao_contract = IPCSDao::new(
         if verify_only == "true" {

@@ -1,4 +1,5 @@
 use crate::dto::quote_dto::QuoteReadDto;
+use crate::entity::zk::DcapProof;
 use crate::{dto::quote_dto::QuoteRegisterDto, error::api_request_error::ValidatedRequest};
 use crate::entity::quote::TdxQuote;
 use crate::entity::dcap::DcapVerifiedOutput;
@@ -6,7 +7,6 @@ use crate::error::db_error::DbError;
 use crate::error::api_error::ApiError;
 use crate::repository::quote_repository::QuoteRepositoryTrait;
 use crate::response::api_response::ApiSuccessResponse;
-use crate::sp1::prove::DcapProof;
 use crate::state::quote_state::QuoteState;
 use axum::{
     extract::{Extension, Path, State},

@@ -41,7 +41,7 @@ pub async fn get_enclave_identity(id: EnclaveIdType, version: u32) -> Result<Vec
     } else {
         parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
     };
-    let provider = ProviderBuilder::new().connect_http(rpc_url);
+    let provider = ProviderBuilder::new().connect(rpc_url);
 
     let enclave_id_dao_address = if verify_only == "true" {
         Address::from_str(AUTOMATA_ENCLAVE_ID_DAO_ADDRESS).unwrap()

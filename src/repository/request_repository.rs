@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 use crate::config::database::{Database, DatabaseTrait};
-use crate::entity::onchain_request::OnchainRequest;
+use crate::entity::request::OnchainRequest;
 use async_trait::async_trait;
 use sqlx::types::Uuid;
 use crate::error::db_error::DbError;
