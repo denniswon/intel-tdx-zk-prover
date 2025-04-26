@@ -141,7 +141,7 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
     // Step 3: Generate the input to upload to SP1 Proving Server
     let input = generate_input(&quote, &intel_collaterals_bytes);
 
-    println!("All collaterals found! Begin uploading input to SP1 Proving Server...");
+    tracing::info!("All collaterals found! Begin uploading input to SP1 Proving Server...");
 
     let mut stdin = SP1Stdin::new();
     stdin.write_slice(&input);
@@ -154,7 +154,7 @@ pub async fn prove(quote: Vec<u8>, proof_system: Option<ProofSystem>) -> Result<
         "executed program with {} cycles",
         report.total_instruction_count()
     );
-    // println!("{:?}", report);
+    // tracing::info!("{:?}", report);
 
     // Generate the proof
     let (pk, vk) = client.setup(DCAP_ELF);
@@ -278,7 +278,7 @@ pub async fn submit_proof(
 
 pub fn deserialize_output(proof: DcapProof) -> VerifiedOutput {
     let deserialized_output = VerifiedOutput::from_bytes(&proof.proof_output);
-    println!("Deserialized output: {:?}", deserialized_output);
+    tracing::info!("Deserialized output: {:?}", deserialized_output);
     deserialized_output
 }
 
