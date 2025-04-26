@@ -54,7 +54,7 @@ impl TxSender {
 
         let provider = ProviderBuilder::new()
             .wallet(self.signer.clone())
-            .connect(rpc_url);
+            .connect_http(rpc_url);
 
         let tx_request = TransactionRequest::default()
             .with_to(self.contract)
@@ -102,12 +102,12 @@ impl TxSender {
                 .with_chain(chain)
                 .with_cached_nonce_management()
                 .with_gas_estimation()
-                .connect(rpc_url),
+                .connect_http(rpc_url),
             None => ProviderBuilder::new()
                 .wallet(self.signer.clone())
                 .with_cached_nonce_management()
                 .with_gas_estimation()
-                .connect(rpc_url),
+                .connect_http(rpc_url),
         };
 
         let chain_id = provider.get_chain_id().await?;
@@ -215,7 +215,7 @@ impl TxSender {
         let rpc_url = self.rpc_url.parse()?;
         let provider = ProviderBuilder::new()
             .wallet(self.signer.clone())
-            .connect(rpc_url);
+            .connect_http(rpc_url);
 
         let tx = TransactionRequest::default()
             .with_to(self.contract)

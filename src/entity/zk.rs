@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use alloy::primitives::TxHash;
 use risc0_zkvm::{Digest, Receipt};
 use serde::{Deserialize, Serialize};

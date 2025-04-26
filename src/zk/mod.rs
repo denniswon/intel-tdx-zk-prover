@@ -131,6 +131,17 @@ pub async fn submit_proof(
 
     let verify_only = parameter::get("VERIFY_ONLY");
 
+    let (proof_output, proof_bytes) = match proof.proof {
+        ZkvmProof::Sp1((sp1_output, _, sp1_proof)) => (sp1_output, sp1_proof.bytes()),
+        ZkvmProof::Risc0((_, _, seal)) => {
+            let mut offset: usize = 0;
+            let output_len = u16::from_be_bytes(proof.output[offset..offset + 2].try_into().unwrap());
+            offset += 2;
+            let raw_verified_output = &proof.output[offset..offset + output_len as usize];
+            (raw_verified_output.to_vec(), seal)
+        }
+    };
+
     match verify_only.as_str() {
         "true" => {
             tracing::info!("Verify only mode enabled");
@@ -143,7 +154,7 @@ pub async fn submit_proof(
             ).expect("Failed to create txSender");
 
             // staticcall to the Halo prove request contract to verify proof
-            let calldata = generate_attestation_calldata(&proof.output, &proof.proof.bytes());
+            let calldata = generate_attestation_calldata(&proof.output, &proof_bytes);
             tracing::info!("Calldata: {}", hex::encode(&calldata));
             let call_output = (tx_sender.call(calldata.clone()).await?).to_vec();
             tracing::info!("Call output: {}", hex::encode(&call_output));
@@ -151,30 +162,11 @@ pub async fn submit_proof(
             tracing::info!("Chain verified: {}", chain_verified);
             tracing::info!("Chain raw verified output: {}", hex::encode(&chain_raw_verified_output));
 
-            if chain_verified {
-                match proof.proof {
-                    ZkvmProof::Sp1((output, vk, proof)) => {
-                        if output != chain_raw_verified_output {
-                            tracing::info!("On-chain verification succeed.");
-                            return Ok((true, chain_raw_verified_output, None, None));
-                        }
-                    },
-                    ZkvmProof::Risc0((receipt, image_id, seal)) => {
-                        let mut offset: usize = 0;
-                        let output_len = u16::from_be_bytes(proof.output[offset..offset + 2].try_into().unwrap());
-                        offset += 2;
-                        let raw_verified_output = &proof.output[offset..offset + output_len as usize];
-
-                        if proof.output != chain_raw_verified_output {
-                            tracing::info!("On-chain verification succeed.");
-                            return Ok((true, chain_raw_verified_output, None, None));
-                        }
-                    }
-                }
+            if chain_verified && proof_output != chain_raw_verified_output {
                 tracing::info!("On-chain verification succeed.");
-            } else {
-                tracing::error!("On-chain verification fail!");
+                return Ok((true, chain_raw_verified_output, None, None));
             }
+            tracing::error!("On-chain verification fail!");
             Ok((chain_verified, chain_raw_verified_output, None, None))
         },
         _ => {
@@ -187,14 +179,7 @@ pub async fn submit_proof(
                 Some(parameter::get("PROVER_PRIVATE_KEY").as_str())
             ).expect("Failed to create txSender");
 
-            let calldata = match proof.proof {
-                ZkvmProof::Sp1((output, vk, zk_proof)) => {
-                    generate_prove_calldata(&request, &proof.output, &zk_proof.bytes())
-                },
-                ZkvmProof::Risc0((receipt, digest, zk_proof)) => {
-                    generate_prove_calldata(&request, &proof.output, &zk_proof)
-                }
-            };
+            let calldata = generate_prove_calldata(&request, &proof.output, &proof_bytes);
             tracing::info!("Calldata: {}", hex::encode(&calldata));
             // submit proof transaction to Halo contract to verify proof
             match tx_sender.send(calldata.clone()).await {

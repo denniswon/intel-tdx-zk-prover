@@ -35,18 +35,16 @@ pub enum EnclaveIdType {
 }
 
 pub async fn get_enclave_identity(id: EnclaveIdType, version: u32) -> Result<Vec<u8>> {
-    let verify_only = parameter::get("VERIFY_ONLY");
-    let rpc_url = if verify_only == "true" {
-        AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL")
-    } else {
-        parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
+    let verify_only = parameter::get("VERIFY_ONLY") == "true";
+    let rpc_url = match verify_only {
+        true => AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL"),
+        false => parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
     };
-    let provider = ProviderBuilder::new().connect(rpc_url);
+    let provider = ProviderBuilder::new().connect_http(rpc_url);
 
-    let enclave_id_dao_address = if verify_only == "true" {
-        Address::from_str(AUTOMATA_ENCLAVE_ID_DAO_ADDRESS).unwrap()
-    } else {
-        parameter::get("ENCLAVE_ID_DAO_ADDRESS").parse::<Address>().unwrap()
+    let enclave_id_dao_address = match verify_only {
+        true => Address::from_str(AUTOMATA_ENCLAVE_ID_DAO_ADDRESS).unwrap(),
+        false => parameter::get("ENCLAVE_ID_DAO_ADDRESS").parse::<Address>().unwrap()
     };
     let enclave_id_dao_contract = IEnclaveIdentityDao::new(
         enclave_id_dao_address,

@@ -27,20 +27,18 @@ sol! {
 }
 
 pub async fn get_tcb_info(tcb_type: u8, fmspc: &str, version: u32) -> Result<Vec<u8>> {
-    let verify_only = parameter::get("VERIFY_ONLY");
-    let rpc_url = if verify_only == "true" {
-        AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL")
-    } else {
-        parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
+    let verify_only = parameter::get("VERIFY_ONLY") == "true";
+    let rpc_url = match verify_only {
+        true => AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL"),
+        false => parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
     };
-    let provider = ProviderBuilder::new().connect(rpc_url);
+    let provider = ProviderBuilder::new().connect_http(rpc_url);
 
     let fmspc_tcb_dao_contract =
         IFmspcTcbDao::new(
-            if verify_only == "true" {
-                Address::from_str(AUTOMATA_FMSPC_TCB_DAO_ADDRESS).unwrap()
-            } else {
-                parameter::get("FMSPC_TCB_DAO_ADDRESS").parse::<Address>().unwrap()
+            match verify_only {
+                true => Address::from_str(AUTOMATA_FMSPC_TCB_DAO_ADDRESS).unwrap(),
+                false => parameter::get("FMSPC_TCB_DAO_ADDRESS").parse::<Address>().unwrap()
             },
             &provider
         );
