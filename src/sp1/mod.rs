@@ -1,9 +1,5 @@
 #![allow(dead_code)]
 
-pub mod chain;
-pub mod constants;
-pub mod parser;
-pub mod utils;
 pub mod prove;
 
 #[cfg(test)]
@@ -12,7 +8,7 @@ mod tests {
     use alloy_chains::NamedChain;
     use x509_parser::nom::AsBytes;
 
-    use crate::sp1::chain::{
+    use crate::chain::{
         attestation::{concat_with_length_prefix, decode_attestation_ret_data, IProve::{self, RequestConfig}},
         TxSender
     };

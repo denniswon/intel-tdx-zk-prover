@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 
-use crate::{config::parameter, sp1::constants::{AUTOMATA_DEFAULT_RPC_URL, AUTOMATA_PCS_DAO_ADDRESS}};
+use crate::{config::parameter, chain::constants::{AUTOMATA_DEFAULT_RPC_URL, AUTOMATA_PCS_DAO_ADDRESS}};
 
 use alloy::{primitives::Address, providers::ProviderBuilder, sol};
 

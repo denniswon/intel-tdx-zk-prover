@@ -2,9 +2,9 @@ use std::str::FromStr;
 
 use anyhow::Result;
 
-use crate::sp1::constants::AUTOMATA_ENCLAVE_ID_DAO_ADDRESS;
-use crate::{config::parameter, sp1::constants::AUTOMATA_DEFAULT_RPC_URL};
-use crate::sp1::utils::remove_prefix_if_found;
+use crate::chain::constants::AUTOMATA_ENCLAVE_ID_DAO_ADDRESS;
+use crate::{config::parameter, chain::constants::AUTOMATA_DEFAULT_RPC_URL};
+use crate::chain::utils::remove_prefix_if_found;
 
 use alloy::{
     primitives::{Address, U256},

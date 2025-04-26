@@ -18,6 +18,8 @@ mod response;
 mod routes;
 mod service;
 mod sp1;
+mod chain;
+mod risc0;
 mod state;
 
 #[::tokio::main]

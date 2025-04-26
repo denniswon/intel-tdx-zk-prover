@@ -2,6 +2,8 @@
 
 pub mod attestation;
 pub mod pccs;
+pub mod constants;
+pub mod utils;
 
 use std::{cmp::max, thread, time::Duration};
 
