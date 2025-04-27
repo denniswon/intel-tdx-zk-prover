@@ -12,24 +12,19 @@ use crate::{
     state::{quote_state::QuoteState, request_state::RequestState}
 };
 use aws_lambda_events::eventbridge::EventBridgeEvent;
+use hex::FromHex;
 use lambda_runtime::{Error, LambdaEvent};
 use sqlx::types::Uuid;
-use tracing::Level;
 
 pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), Error> {
-    tracing::debug!("Event: {:?}", event);
-    parameter::init();
     // initialize tracing for logging
-    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
+    tracing_subscriber::fmt().init();
+    tracing::info!("Event: {:?}", event);
+    parameter::init();
 
-    // Extract some useful information from the request
-    let payload = event.payload;
-    tracing::debug!("Payload: {:?}", payload);
-
-    let request_id = payload.detail.get("request_id").unwrap();
-    tracing::debug!("Request ID: {}", request_id);
-    let request_id_hex = request_id.as_str().unwrap();
-    let request_id = hex::decode(request_id_hex).unwrap();
+    let request_id_hex = event.payload.detail.get("request_id").unwrap().as_str().unwrap();
+    tracing::info!("Request ID hex: {}", request_id_hex);
+    let request_id = Vec::from_hex(request_id_hex.strip_prefix("0x").unwrap_or(request_id_hex))?;
 
     let db_conn = Arc::new(
         Database::init()
