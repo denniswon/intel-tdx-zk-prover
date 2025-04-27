@@ -1,18 +1,21 @@
 use crate::dto::quote_dto::QuoteReadDto;
 use crate::entity::zk::DcapProof;
 use crate::{dto::quote_dto::QuoteRegisterDto, error::api_request_error::ValidatedRequest};
-use crate::entity::quote::TdxQuote;
+use crate::entity::quote::{ProofType, TdxQuote};
 use crate::entity::dcap::DcapVerifiedOutput;
 use crate::error::db_error::DbError;
 use crate::error::api_error::ApiError;
 use crate::repository::quote_repository::QuoteRepositoryTrait;
 use crate::response::api_response::ApiSuccessResponse;
 use crate::state::quote_state::QuoteState;
+use axum::extract::Query;
 use axum::{
     extract::{Extension, Path, State},
     Json,
 };
+use serde::Deserialize;
 use sqlx::types::Uuid;
+
 
 pub async fn get(
     Extension(quote): Extension<TdxQuote>,
@@ -71,13 +74,20 @@ pub async fn verify_dcap(
     }
 }
 
+#[derive(Deserialize)]
+pub struct ProveParams {
+    proof_type: ProofType,
+}
+
 pub async fn prove(
     State(state): State<QuoteState>,
     Path(id): Path<String>,
+    Query(params): Query<ProveParams>
 ) -> Result<Json<DcapProof>, ApiError> {
+    let proof_type = params.proof_type;
     match Uuid::parse_str(&id) {
         Ok(id) => {
-            let proof = state.quote_service.prove(id).await;
+            let proof = state.quote_service.prove(id, proof_type).await;
             match proof {
                 Ok(proof) => Ok(Json(proof)),
                 Err(e) => Err(ApiError::QuoteError(e)),

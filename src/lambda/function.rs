@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use crate::{
     config::{
@@ -13,6 +13,7 @@ use crate::{
 use aws_lambda_events::eventbridge::EventBridgeEvent;
 use hex::FromHex;
 use lambda_runtime::{Error, LambdaEvent};
+use serde_json::Value;
 
 pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), Error> {
     // initialize tracing for logging
@@ -23,6 +24,11 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
     let request_id_hex = event.payload.detail.get("request_id").unwrap().as_str().unwrap();
     tracing::info!("Request ID hex: {}", request_id_hex);
     let request_id = Vec::from_hex(request_id_hex.strip_prefix("0x").unwrap_or(request_id_hex))?;
+
+    let default_proof_type = Value::String("sp1".to_string());
+    let proof_type_str = event.payload.detail.get("proof_type").unwrap_or(&default_proof_type).as_str().unwrap();
+    tracing::info!("Proof type: {}", proof_type_str);
+    let proof_type = ProofType::from_str(proof_type_str.to_lowercase().as_str()).unwrap();
 
     let db_conn = Arc::new(
         Database::init()
@@ -47,7 +53,7 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
 
     let quote_id = attestation.id;
     tracing::info!("Attestation found for request ID: {} {}", request_id_hex, attestation.status);
-    let proof = zk::prove(attestation.quote, ProofType::Sp1, None).await
+    let proof = zk::prove(attestation.quote, proof_type, None).await
         .map_err(|e| {
             tracing::error!("Failed to generate proof for request ID: {:?} {}", request_id_hex, e.to_string());
             QuoteError::Prove
@@ -62,11 +68,12 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
     })?;
     tracing::info!("Successfully verified proof.");
 
-    let (verified, raw_verified_output, tx_hash, response) = zk::submit_proof(onchain_request, proof.proof).await
-        .map_err(|e| {
-            tracing::error!("Failed to submit proof: {}", e);
-            QuoteError::SubmitProof
-        })?;
+    let (verified, raw_verified_output, tx_hash, response) =
+        zk::submit_proof(onchain_request, proof_type, proof.proof).await
+            .map_err(|e| {
+                tracing::error!("Failed to submit proof: {}", e);
+                QuoteError::SubmitProof
+            })?;
 
     tracing::info!(
         "Proof submitted for request ID: {} verified: {} raw_verified_output: {}",
@@ -81,7 +88,7 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
         // Update onchain request status
         quote_state.quote_repo.update_status(
             quote_id,
-            ProofType::Sp1,
+            proof_type,
             TdxQuoteStatus::Failure,
             Some(response.transaction_hash.to_vec()),
             None,
@@ -96,7 +103,7 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
         // Update onchain request status
         quote_state.quote_repo.update_status(
             quote_id,
-            ProofType::Sp1,
+            proof_type,
             TdxQuoteStatus::Failure,
             Some(tx_hash.unwrap().to_vec()),
             None,

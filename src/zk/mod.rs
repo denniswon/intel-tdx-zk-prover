@@ -124,6 +124,7 @@ pub async fn verify_proof(proof: DcapProof) -> Result<VerifiedOutput> {
 
 pub async fn submit_proof(
     request: OnchainRequest,
+    proof_type: ProofType,
     proof: DcapProof,
 ) -> Result<(bool, Vec<u8>, Option<TxHash>, Option<SubmitProofResponse>)> {
     // Send the calldata to Ethereum.
@@ -179,7 +180,7 @@ pub async fn submit_proof(
                 Some(parameter::get("PROVER_PRIVATE_KEY").as_str())
             ).expect("Failed to create txSender");
 
-            let calldata = generate_prove_calldata(&request, &proof.output, &proof_bytes);
+            let calldata = generate_prove_calldata(&request, proof_type, &proof.output, &proof_bytes);
             tracing::info!("Calldata: {}", hex::encode(&calldata));
             // submit proof transaction to Halo contract to verify proof
             match tx_sender.send(calldata.clone()).await {

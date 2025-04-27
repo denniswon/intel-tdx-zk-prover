@@ -136,12 +136,12 @@ impl QuoteService {
         Ok(collaterals)
     }
 
-    pub async fn prove(&self, id: Uuid) -> Result<DcapProof, QuoteError> {
+    pub async fn prove(&self, id: Uuid, proof_type: ProofType) -> Result<DcapProof, QuoteError> {
         let quote = self.quote_repo.find(id).await;
 
         match quote {
             Ok(quote) => {
-                let proof = prove(quote.quote, ProofType::Sp1, None).await;
+                let proof = prove(quote.quote, proof_type, None).await;
                 match proof {
                     Ok(proof) => Ok(proof.proof),
                     _ => Err(QuoteError::Invalid),
