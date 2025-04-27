@@ -37,16 +37,16 @@ pub async fn prove(collateral_input: Vec<u8>, proof_system: Option<ProofSystem>)
         client.prove(&pk, &stdin).groth16().run().unwrap()
     };
 
-    let ret_slice = ret.as_slice();
-    let output = extract_proof_output(ret_slice.to_vec());
+    let journal = ret.as_slice();
+    let raw_verified_output = extract_proof_output(journal.to_vec());
 
-    tracing::debug!("Execution Output: {}", hex::encode(ret_slice));
+    tracing::debug!("Execution Output (journal): {}", hex::encode(journal));
     tracing::debug!("Proof pub value: {}", hex::encode(proof.public_values.as_slice()));
     tracing::debug!("VK: {}", vk.bytes32().to_string().as_str());
     tracing::debug!("Proof: {}", hex::encode(proof.bytes()));
 
-    let zkvm_proof = ZkvmProof::Sp1((output, vk, proof));
-    let dcap_proof = DcapProof { output: ret_slice.to_vec(), proof: zkvm_proof };
+    let zk_proof = ZkvmProof::Sp1((journal.to_vec(), vk, proof));
+    let dcap_proof = DcapProof { verified_output: raw_verified_output, proof: zk_proof };
 
     Ok(ProofResponse { proof: dcap_proof, proof_type: ProofType::Sp1, prover_request_id: None })
 }

@@ -109,17 +109,16 @@ pub async fn prove(quote: Vec<u8>, proof_type: ProofType, proof_system: Option<P
     }
 }
 
-pub async fn verify_proof(proof: DcapProof) -> Result<VerifiedOutput> {
-    match proof.proof {
-        ZkvmProof::Sp1((_output, vk, proof)) => {
-            ProverClient::from_env().verify(&proof, &vk)?;
+pub async fn verify_proof(proof: &DcapProof) -> Result<VerifiedOutput> {
+    match &proof.proof {
+        ZkvmProof::Sp1((_proof_bytes, vk, sp1_proof)) => {
+            ProverClient::from_env().verify(&sp1_proof, &vk)?;
         },
-        ZkvmProof::Risc0((receipt, image_id, _proof)) => {
-            receipt.verify(image_id)?;
+        ZkvmProof::Risc0((receipt, image_id, _seal)) => {
+            receipt.verify(*image_id)?;
         }
-    }
-    let verified_output = VerifiedOutput::from_bytes(&proof.output);
-    Ok(verified_output)
+    };
+    Ok(VerifiedOutput::from_bytes(&proof.verified_output))
 }
 
 pub async fn submit_proof(
@@ -132,15 +131,10 @@ pub async fn submit_proof(
 
     let verify_only = parameter::get("VERIFY_ONLY");
 
-    let (proof_output, proof_bytes) = match proof.proof {
-        ZkvmProof::Sp1((sp1_output, _, sp1_proof)) => (sp1_output, sp1_proof.bytes()),
-        ZkvmProof::Risc0((_, _, seal)) => {
-            let mut offset: usize = 0;
-            let output_len = u16::from_be_bytes(proof.output[offset..offset + 2].try_into().unwrap());
-            offset += 2;
-            let raw_verified_output = &proof.output[offset..offset + output_len as usize];
-            (raw_verified_output.to_vec(), seal)
-        }
+    let verified_output = proof.verified_output;
+    let (program_output, proof) = match proof.proof {
+        ZkvmProof::Sp1((proof_bytes, _, sp1_proof)) => (proof_bytes, sp1_proof.bytes()),
+        ZkvmProof::Risc0((receipt, _image_id, seal)) => (receipt.journal.bytes, seal)
     };
 
     match verify_only.as_str() {
@@ -155,7 +149,7 @@ pub async fn submit_proof(
             ).expect("Failed to create txSender");
 
             // staticcall to the Halo prove request contract to verify proof
-            let calldata = generate_attestation_calldata(&proof.output, &proof_bytes);
+            let calldata = generate_attestation_calldata(&program_output, &proof);
             tracing::info!("Calldata: {}", hex::encode(&calldata));
             let call_output = (tx_sender.call(calldata.clone()).await?).to_vec();
             tracing::info!("Call output: {}", hex::encode(&call_output));
@@ -163,7 +157,7 @@ pub async fn submit_proof(
             tracing::info!("Chain verified: {}", chain_verified);
             tracing::info!("Chain raw verified output: {}", hex::encode(&chain_raw_verified_output));
 
-            if chain_verified && proof_output != chain_raw_verified_output {
+            if chain_verified && verified_output != chain_raw_verified_output {
                 tracing::info!("On-chain verification succeed.");
                 return Ok((true, chain_raw_verified_output, None, None));
             }
@@ -180,7 +174,7 @@ pub async fn submit_proof(
                 Some(parameter::get("PROVER_PRIVATE_KEY").as_str())
             ).expect("Failed to create txSender");
 
-            let calldata = generate_prove_calldata(&request, proof_type, &proof.output, &proof_bytes);
+            let calldata = generate_prove_calldata(&request, proof_type, &program_output, &proof);
             tracing::info!("Calldata: {}", hex::encode(&calldata));
             // submit proof transaction to Halo contract to verify proof
             match tx_sender.send(calldata.clone()).await {
@@ -189,20 +183,20 @@ pub async fn submit_proof(
                     tracing::info!("Transaction receipt: {:#?}", receipt);
                     match receipt {
                         Some(_receipt) => {
-                            Ok((true, proof.output, Some(tx_hash), Some(SubmitProofResponse {
+                            Ok((true, verified_output, Some(tx_hash), Some(SubmitProofResponse {
                                 transaction_hash: tx_hash,
                                 proof_type: ProofType::Sp1,
                                 status: TdxQuoteStatus::Success
                             })))
                         },
                         None => {
-                            Ok((false, proof.output, Some(tx_hash), None))
+                            Ok((false, verified_output, Some(tx_hash), None))
                         }
                     }
                 },
                 Err(e) => {
                     tracing::error!("Failed to submit proof transaction: {}", e);
-                    Ok((false, proof.output, None, None))
+                    Ok((false, verified_output, None, None))
                 }
             }
         }
@@ -217,7 +211,11 @@ pub fn extract_proof_output(execution_output: Vec<u8>) -> Vec<u8> {
 }
 
 pub fn deserialize_output(proof: DcapProof) -> VerifiedOutput {
-    let proof_output = extract_proof_output(proof.output);
+    let program_output = match proof.proof {
+        ZkvmProof::Sp1((proof_bytes, _, _)) => proof_bytes,
+        ZkvmProof::Risc0((receipt, _, _)) => receipt.journal.bytes
+    };
+    let proof_output = extract_proof_output(program_output);
     let deserialized_output = VerifiedOutput::from_bytes(&proof_output);
     tracing::debug!("Deserialized output: {:?}", deserialized_output);
     deserialized_output

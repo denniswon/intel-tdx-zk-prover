@@ -35,12 +35,12 @@ pub async fn prove(collateral_input: Vec<u8>, proof_system: Option<ProofSystem>)
     receipt.verify(image_id)?;
 
     let _receipt = receipt.clone();
-    let output;
-    let proof;
+    let journal;
+    let seal;
     match _receipt.inner {
         Groth16(snark_receipt) => {
-            output = _receipt.journal.bytes.clone();
-            proof = groth16::encode(snark_receipt.seal)?;
+            journal = _receipt.journal.bytes.clone();
+            seal = groth16::encode(snark_receipt.seal)?;
         },
         _ => {
             return Err(
@@ -51,22 +51,22 @@ pub async fn prove(collateral_input: Vec<u8>, proof_system: Option<ProofSystem>)
     }
 
     let mut offset: usize = 0;
-    let raw_verified_output = extract_proof_output(output.clone());
+    let raw_verified_output = extract_proof_output(journal.clone());
     let verified_output = VerifiedOutput::from_bytes(&raw_verified_output);
     offset += raw_verified_output.len();
-    let current_time = u64::from_be_bytes(output[offset..offset + 8].try_into().unwrap());
+    let current_time = u64::from_be_bytes(journal[offset..offset + 8].try_into().unwrap());
     offset += 8;
-    let tcbinfo_root_hash = &output[offset..offset + 32];
+    let tcbinfo_root_hash = &journal[offset..offset + 32];
     offset += 32;
-    let enclaveidentity_root_hash = &output[offset..offset + 32];
+    let enclaveidentity_root_hash = &journal[offset..offset + 32];
     offset += 32;
-    let root_cert_hash = &output[offset..offset + 32];
+    let root_cert_hash = &journal[offset..offset + 32];
     offset += 32;
-    let signing_cert_hash = &output[offset..offset + 32];
+    let signing_cert_hash = &journal[offset..offset + 32];
     offset += 32;
-    let root_crl_hash = &output[offset..offset + 32];
+    let root_crl_hash = &journal[offset..offset + 32];
     offset += 32;
-    let pck_crl_hash = &output[offset..offset + 32];
+    let pck_crl_hash = &journal[offset..offset + 32];
 
     tracing::info!("Verified Output: {:?}", verified_output);
     tracing::info!("Timestamp: {}", current_time);
@@ -77,12 +77,12 @@ pub async fn prove(collateral_input: Vec<u8>, proof_system: Option<ProofSystem>)
     tracing::info!("Root CRL hash: {}", hex::encode(&root_crl_hash));
     tracing::info!("PCK CRL hash: {}", hex::encode(&pck_crl_hash));
 
-    tracing::info!("Journal: {}", hex::encode(&output.clone()));
-    tracing::info!("proof: {}", hex::encode(&proof));
+    tracing::info!("Journal: {}", hex::encode(&journal.clone()));
+    tracing::info!("Seal: {}", hex::encode(&seal));
 
     let dcap_proof = DcapProof {
-        output: output,
-        proof: ZkvmProof::Risc0((receipt, image_id, proof)),
+        verified_output: raw_verified_output,
+        proof: ZkvmProof::Risc0((receipt, image_id, seal)),
     };
 
     Ok(ProofResponse { proof: dcap_proof, proof_type: ProofType::Risc0, prover_request_id: None })

@@ -23,24 +23,26 @@ pub enum ProofSystem {
 /// Enum representing the available proof systems
 #[derive(Clone, Serialize, Deserialize)]
 pub enum ZkvmProof {
-    Sp1((Vec<u8>, SP1VerifyingKey, SP1ProofWithPublicValues)),
-    Risc0((Receipt, Digest, Vec<u8>)),
+    Sp1((Vec<u8> /* journal */, SP1VerifyingKey /* vk */, SP1ProofWithPublicValues /* proof */)),
+    Risc0((Receipt /* receipt: contains journal */, Digest /* image_id */, Vec<u8> /* seal */)),
 }
 
 impl std::fmt::Debug for ZkvmProof {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             ZkvmProof::Sp1((output, vk, proof)) =>
-                write!(f, "Sp1 {{ output: {:?}, vk: {:?}, proof: {:?} }}", hex::encode(output), hex::encode(vk.bytes32()), proof),
-            ZkvmProof::Risc0((receipt, digest, proof)) =>
-                write!(f, "Risc0 {{ receipt: {:?}, digest: {:?}, proof: {:?} }}", receipt, hex::encode(digest), proof),
+                write!(f, "Sp1 {{ proof_bytes: {:?}, vk: {:?}, proof: {:?} }}",
+                    hex::encode(output), hex::encode(vk.bytes32()), proof),
+            ZkvmProof::Risc0((receipt, image_id, seal)) =>
+                write!(f, "Risc0 {{ journal: {:?}, image_id: {:?}, seal: {:?} }}",
+                    hex::encode(receipt.journal.bytes.clone()), hex::encode(image_id), hex::encode(seal)),
         }
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, Validate)]
 pub struct DcapProof {
-    pub output: Vec<u8>,
+    pub verified_output: Vec<u8>,
     pub proof: ZkvmProof,
 }
 

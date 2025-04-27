@@ -62,7 +62,7 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
     tracing::info!("Proof generated for request ID: {:?}", request_id_hex);
     tracing::info!("Verifying proof...");
     
-    zk::verify_proof(proof.proof.clone()).await.map_err(|e| {
+    zk::verify_proof(&proof.proof).await.map_err(|e| {
         tracing::error!("Failed to verify proof: {}", e);
         QuoteError::VerifyProof
     })?;

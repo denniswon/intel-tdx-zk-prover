@@ -101,7 +101,7 @@ pub async fn verify(
     State(state): State<QuoteState>,
     ValidatedRequest(payload): ValidatedRequest<DcapProof>,
 ) -> Result<Json<DcapVerifiedOutput>, ApiError> {
-    let output = state.quote_service.verify(payload).await;
+    let output = state.quote_service.verify(&payload).await;
     match output {
         Ok(output) => Ok(Json(DcapVerifiedOutput::from_output(output))),
         Err(e) => Err(ApiError::QuoteError(e)),
@@ -112,7 +112,7 @@ pub async fn submit_proof(
     State(state): State<QuoteState>,
     ValidatedRequest(payload): ValidatedRequest<DcapProof>,
 ) -> Result<Json<DcapVerifiedOutput>, ApiError> {
-    let output = state.quote_service.submit_proof(payload).await;
+    let output = state.quote_service.submit_proof(&payload).await;
     match output {
         Ok(output) => Ok(Json(DcapVerifiedOutput::from_output(output))),
         Err(e) => Err(ApiError::QuoteError(e)),

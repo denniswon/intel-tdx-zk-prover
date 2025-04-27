@@ -8,7 +8,7 @@
   "region": "us-east-2",
   "resources": [],
   "detail": {
-    "request_id": "0x115317290445a0ad2e5b6d6bcfaab8f97a344779bcab806c56d221bd4b9ba24d",
-    "proof_type": "sp1"
+    "request_id": "0x0d879b28222a939ce05a25eb5ccaed385779e9684b0cfc1782fc6d4ef8cb7efe",
+    "proof_type": "risc0"
   }
 }

@@ -151,7 +151,7 @@ impl QuoteService {
         }
     }
 
-    pub async fn verify(&self, proof: DcapProof) -> Result<VerifiedOutput, QuoteError> {
+    pub async fn verify(&self, proof: &DcapProof) -> Result<VerifiedOutput, QuoteError> {
         let result = verify_proof(proof).await;
         match result {
             Ok(output) => Ok(output),
@@ -159,7 +159,7 @@ impl QuoteService {
         }
     }
 
-    pub async fn submit_proof(&self, proof: DcapProof) -> Result<VerifiedOutput, QuoteError> {
+    pub async fn submit_proof(&self, proof: &DcapProof) -> Result<VerifiedOutput, QuoteError> {
         let result = verify_proof(proof).await;
         match result {
             Ok(output) => Ok(output),
