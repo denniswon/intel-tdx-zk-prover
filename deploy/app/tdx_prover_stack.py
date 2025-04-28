@@ -132,6 +132,8 @@ class TdxProver(Stack):
                 "NETWORK_PRIVATE_KEY": self.service_secrets.secret_value_from_json("NETWORK_PRIVATE_KEY").unsafe_unwrap(),
                 "PROVER_PRIVATE_KEY": self.service_secrets.secret_value_from_json("PROVER_PRIVATE_KEY").unsafe_unwrap(),
                 "SQLX_OFFLINE": "false",
+                "ENV": "prod",
+                "RUST_LOG": "debug",
             },
             vpc=vpc,
             security_groups=[lambda_security_group],
