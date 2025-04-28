@@ -16,6 +16,7 @@ pub trait OnchainRequestRepositoryTrait {
     fn new(db_conn: &Arc<Database>) -> Self;
     async fn find_all_by_model_id(&self, model_id: String) -> Vec<OnchainRequest>;
     async fn find(&self, id: Uuid) -> Result<OnchainRequest, DbError>;
+    async fn find_by_request_id(&self, request_id: Vec<u8>) -> Result<OnchainRequest, DbError>;
 }
 
 #[async_trait]
@@ -71,7 +72,34 @@ impl OnchainRequestRepositoryTrait for OnchainRequestRepository {
         ).fetch_one(self.db_conn.get_pool())
         .await
         .map_err(|e| {
-            println!("Failed to fetch onchain request: {}", e);
+            tracing::info!("Failed to fetch onchain request: {}", e);
+            DbError::SomethingWentWrong("Failed to fetch onchain request".to_string())
+        })?;
+        return Ok(onchain_request);
+    }
+
+    async fn find_by_request_id(&self, request_id: Vec<u8>) -> Result<OnchainRequest, DbError> {
+        let onchain_request = sqlx::query_as!(
+            OnchainRequest,
+            r#"SELECT
+            id,
+            creator_address,
+            operator_address,
+            model_id,
+            fee_wei,
+            nonce,
+            request_id,
+            deadline,
+            is_cancelled,
+            cancelled_at,
+            created_at as "created_at: _",
+            updated_at as "updated_at: _"
+            FROM onchain_request WHERE request_id = $1"#,
+            request_id
+        ).fetch_one(self.db_conn.get_pool())
+        .await
+        .map_err(|e| {
+            tracing::info!("Failed to fetch onchain request: {}", e);
             DbError::SomethingWentWrong("Failed to fetch onchain request".to_string())
         })?;
         return Ok(onchain_request);

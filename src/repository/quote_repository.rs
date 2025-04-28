@@ -57,7 +57,7 @@ impl QuoteRepositoryTrait for QuoteRepository {
         .fetch_one(self.db_conn.get_pool())
         .await
         .map_err(|e| {
-            println!("Failed to fetch quote: {}", e);
+            tracing::info!("Failed to fetch quote: {}", e);
             DbError::SomethingWentWrong("Failed to fetch quote".to_string())
         })?;
         return Ok(quote);
@@ -107,7 +107,7 @@ impl QuoteRepositoryTrait for QuoteRepository {
         .fetch_one(self.db_conn.get_pool())
         .await
         .map_err(|e| {
-            println!("Failed to fetch quote: {}", e);
+            tracing::info!("Failed to fetch quote: {}", e);
             DbError::SomethingWentWrong("Failed to fetch quote".to_string())
         })?;
         return Ok(quote);
@@ -134,7 +134,7 @@ impl QuoteRepositoryTrait for QuoteRepository {
                 .execute(self.db_conn.get_pool())
                 .await
                 .map_err(|e| {
-                    println!("Failed to update quote status: {}", e);
+                    tracing::info!("Failed to update quote status: {}", e);
                     DbError::SomethingWentWrong("Failed to update quote status".to_string())
                 })?;
             }
@@ -148,7 +148,7 @@ impl QuoteRepositoryTrait for QuoteRepository {
                 .execute(self.db_conn.get_pool())
                 .await
                 .map_err(|e| {
-                    println!("Failed to update quote status: {}", e);
+                    tracing::info!("Failed to update quote status: {}", e);
                     DbError::SomethingWentWrong("Failed to update quote status".to_string())
                 })?;
             }
