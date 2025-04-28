@@ -68,8 +68,11 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
 
     match result {
         Ok(proof) => {
-            tracing::info!("Verifying proof...");
-            let _ = prove::verify_proof(proof.proof.clone()).await;
+            // only verify proof in dev because in lambda, filesystem is not writable
+            if std::env::var("ENV").unwrap_or("dev".to_string()) != "prod" {
+                tracing::info!("Verifying proof...");
+                let _ = prove::verify_proof(proof.proof.clone()).await;
+            }
 
             match prove::submit_proof(onchain_request, proof.proof).await {
                 Ok((verified, verified_output, tx_hash, response)) => {
