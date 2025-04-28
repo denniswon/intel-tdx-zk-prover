@@ -139,7 +139,7 @@ class TdxProver(Stack):
             security_groups=[lambda_security_group],
             log_group=log_group,
             memory_size=1024,  # Increased memory for better performance
-            timeout=Duration.seconds(60),  # Increased timeout for processing
+            timeout=Duration.seconds(300),  # Increased timeout to 5 minutes for processing
         )
 
         # Grant the Lambda function permission to read the secrets
