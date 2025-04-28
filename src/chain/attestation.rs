@@ -40,11 +40,16 @@ sol! {
     }
 }
 
-pub fn generate_attestation_calldata(output: &[u8], proof: &[u8]) -> Vec<u8> {
+pub fn generate_attestation_calldata(output: &[u8], proof_type: ProofType, proof: &[u8]) -> Vec<u8> {
+    let proof_type = match proof_type {
+        ProofType::Sp1 => IProve::ProofType::SP1ZKP,
+        ProofType::Risc0 => IProve::ProofType::RISC0ZKP,
+    };
+
     IAttestation::IAttestationCalls::verifyAndAttestWithZKProof(
         IAttestation::verifyAndAttestWithZKProofCall {
             output: Bytes::from(output.to_vec()),
-            zk_coprocessor_type: 2,
+            zk_coprocessor_type: proof_type.into(),
             proof: Bytes::from(proof.to_vec()),
         },
     )
@@ -104,6 +109,6 @@ pub fn concat_with_length_prefix(output: &[u8], proof: &[u8]) -> Vec<u8> {
 }
 
 pub fn decode_attestation_ret_data(ret: Vec<u8>) -> (bool, Vec<u8>) {
-    let (verified, output) = <(bool, Bytes)>::abi_decode_params(&ret).unwrap();
+    let (verified, output) = <(bool, Bytes)>::abi_decode_params(&ret, true).unwrap();
     (verified, output.to_vec())
 }

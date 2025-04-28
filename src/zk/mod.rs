@@ -252,7 +252,7 @@ pub async fn submit_proof(
             ).expect("Failed to create txSender");
 
             // staticcall to the Halo prove request contract to verify proof
-            let calldata = generate_attestation_calldata(&program_output, &proof);
+            let calldata = generate_attestation_calldata(&program_output, proof_type, &proof);
             tracing::info!("Calldata: {}", hex::encode(&calldata));
             let call_output = (tx_sender.call(calldata.clone()).await?).to_vec();
             tracing::info!("Call output: {}", hex::encode(&call_output));

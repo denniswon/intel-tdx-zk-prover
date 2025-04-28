@@ -11,7 +11,7 @@ use super::quote::{ProofType, TdxQuoteStatus};
 /// DCAP ELF for Sp1
 pub const DCAP_SP1_ELF: &[u8] = include_bytes!("../../elf/dcap-sp1");
 /// DCAP ELF for Risc0
-pub const DCAP_RISC0_ELF: &[u8] = include_bytes!("../../elf/dcap-risc0");
+pub const DCAP_RISC0_ELF: &[u8] = include_bytes!("../../elf/guest");
 
 /// Enum representing the available proof systems
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
