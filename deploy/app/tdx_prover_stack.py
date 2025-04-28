@@ -121,7 +121,7 @@ class TdxProver(Stack):
                 "LAMBDA": "true",
                 "DATABASE_URL": self.service_secrets.secret_value_from_json("DATABASE_URL").unsafe_unwrap(),
                 "RUST_BACKTRACE": "1",  # Enable backtraces for better debugging
-                "DEFAULT_RPC_URL": "https://mainnet.base.org",
+                "DEFAULT_RPC_URL": "https://dimensional-attentive-choice.base-mainnet.quiknode.pro/db9e914af47f152dbd6d6f4d60fdf17bc1175485",
                 "DEFAULT_DCAP_CONTRACT": "0x9E4a45c40e06CE0653C33769138dF48802c1CF1e",
                 "ENCLAVE_ID_DAO_ADDRESS": "0xd74e880029cd3b6b434f16bea5f53a06989458ee",
                 "FMSPC_TCB_DAO_ADDRESS": "0xd3a3f34e8615065704ccb5c304c0ced41bb81483",
@@ -131,7 +131,7 @@ class TdxProver(Stack):
                 "SP1_PROVER": "network",
                 "NETWORK_PRIVATE_KEY": self.service_secrets.secret_value_from_json("NETWORK_PRIVATE_KEY").unsafe_unwrap(),
                 "PROVER_PRIVATE_KEY": self.service_secrets.secret_value_from_json("PROVER_PRIVATE_KEY").unsafe_unwrap(),
-                "SQLX_OFFLINE": "false",
+                "SQLX_OFFLINE": "true",
                 "ENV": "prod",
                 "RUST_LOG": "debug",
             },
