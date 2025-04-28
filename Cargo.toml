@@ -25,7 +25,7 @@ mockall = "0.13.1"
 openssl = { version = "0.10.72", features = ["vendored"] }
 rand = "0.9.1"
 risc0-ethereum-contracts = { git = "https://github.com/denniswon/risc0-ethereum.git" }
-risc0-zkvm = "2.0.1"
+risc0-zkvm = "1.2.1"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140", features = ["alloc"] }
 sp1-sdk = "^4.1.0"

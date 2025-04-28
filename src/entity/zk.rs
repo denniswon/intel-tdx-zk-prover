@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use alloy::primitives::TxHash;
-use risc0_zkvm::{Digest, Receipt};
+use risc0_zkvm::{sha::Digest, Receipt};
 use serde::{Deserialize, Serialize};
 use sp1_sdk::{HashableKey, SP1ProofWithPublicValues, SP1VerifyingKey};
 use validator::Validate;
