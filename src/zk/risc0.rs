@@ -3,6 +3,7 @@ use risc0_ethereum_contracts::groth16;
 use risc0_zkvm::{
     compute_image_id, default_prover, ExecutorEnv, InnerReceipt::Groth16, ProverOpts,
 };
+use tokio::task;
 use crate::{
     entity::{quote::ProofType, zk::{DcapProof, ProofResponse, ProofSystem, ZkvmProof, DCAP_RISC0_ELF}},
     zk::extract_proof_output
@@ -17,20 +18,15 @@ pub async fn prove(collateral_input: Vec<u8>, proof_system: Option<ProofSystem>)
     // Set RISC0_PROVER env to bonsai
     std::env::set_var("RISC0_PROVER", "bonsai");
 
-    let env = ExecutorEnv::builder().write_slice(&collateral_input).build()?;
+    // BonsaiProver uses the reqwest blocking client as the default (and only option).
+    // It will cause issues when running in async contexts unless explicitly ran in a task that can block (context)
+    let receipt = task::spawn_blocking(move || {
+        let env = ExecutorEnv::builder().write_slice(&collateral_input).build().unwrap();
+        default_prover()
+            .prove_with_opts(env, DCAP_RISC0_ELF, &ProverOpts::groth16()).unwrap()
+            .receipt
+    }).await?;
 
-    let receipt = match proof_system {
-        Some(ProofSystem::Groth16) => {
-            default_prover()
-                .prove_with_opts(env, DCAP_RISC0_ELF, &ProverOpts::groth16())?
-                .receipt
-        }
-        _ => {
-            default_prover()
-                .prove_with_opts(env, DCAP_RISC0_ELF, &ProverOpts::default())?
-                .receipt
-        }
-    };
     let image_id = compute_image_id(DCAP_RISC0_ELF).unwrap();
     receipt.verify(image_id)?;
 

@@ -19,7 +19,7 @@ pub struct TdxQuote {
     pub request_id: Option<Vec<u8>>,
 }
 
-#[derive(strum_macros::Display, Debug, Clone, Copy, sqlx::Type, Serialize, Deserialize)]
+#[derive(strum_macros::Display, Debug, Clone, Copy, PartialEq, Eq, sqlx::Type, Serialize, Deserialize)]
 #[strum(serialize_all = "lowercase")]
 #[sqlx(type_name = "prooftype", rename_all = "lowercase")]
 pub enum ProofType {

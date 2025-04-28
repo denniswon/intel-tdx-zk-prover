@@ -93,10 +93,19 @@ pub async fn prove(quote: Vec<u8>, proof_type: ProofType, proof_system: Option<P
     intel_collaterals.set_sgx_tcb_signing_der(&signing_ca);
     tracing::debug!("set_sgx_intel_root_ca_crl_der: {:?}", root_ca_crl);
     intel_collaterals.set_sgx_intel_root_ca_crl_der(&root_ca_crl);
-    tracing::debug!("set_sgx_platform_crl_der: {:?}", pck_crl);
-    intel_collaterals.set_sgx_platform_crl_der(&pck_crl);
+    match pck_type {
+        CA::PLATFORM => {
+            tracing::debug!("set_sgx_platform_crl_der: {:?}", pck_crl);
+            intel_collaterals.set_sgx_platform_crl_der(&pck_crl);
+        }
+        CA::PROCESSOR => {
+            tracing::debug!("set_sgx_processor_crl_der: {:?}", pck_crl);
+            intel_collaterals.set_sgx_processor_crl_der(&pck_crl);
+        }
+        _ => unreachable!(),
+    }
 
-    let intel_collaterals_bytes = intel_collaterals.to_bytes();
+    let intel_collaterals_bytes = serialize_collaterals(proof_type, &intel_collaterals, pck_type)?;
 
     // Step 3: Generate the input to upload to Proving Server
     let input = generate_input(&quote, &intel_collaterals_bytes);
@@ -107,6 +116,100 @@ pub async fn prove(quote: Vec<u8>, proof_type: ProofType, proof_system: Option<P
         ProofType::Sp1 => sp1_prove(input, proof_system).await,
         ProofType::Risc0 => risc0_prove(input, proof_system).await
     }
+}
+
+// Modified from https://github.com/automata-network/dcap-rs/blob/b218a9dcdf2aec8ee05f4d2bd055116947ddfced/src/types/collaterals.rs#L35-L105
+fn serialize_collaterals(proof_type: ProofType, collaterals: &IntelCollateral, pck_type: CA) -> Result<Vec<u8>> {
+    if proof_type == ProofType::Sp1 {
+        return Ok(collaterals.to_bytes());
+    }
+
+    let tcbinfo_bytes = match &collaterals.tcbinfo_bytes {
+        Some(ref tcbinfo) => tcbinfo.as_slice(),
+        None => &[],
+    };
+
+    let qeidentity_bytes = match &collaterals.qeidentity_bytes {
+        Some(ref qeidentity) => qeidentity.as_slice(),
+        None => &[],
+    };
+
+    let sgx_intel_root_ca_der_bytes = match &collaterals.sgx_intel_root_ca_der {
+        Some(der) => der.as_slice(),
+        None => &[],
+    };
+
+    let sgx_tcb_signing_der_bytes = match &collaterals.sgx_tcb_signing_der {
+        Some(der) => der.as_slice(),
+        None => &[],
+    };
+
+    let sgx_intel_root_ca_crl_der_bytes = match &collaterals.sgx_intel_root_ca_crl_der {
+        Some(der) => der.as_slice(),
+        None => &[],
+    };
+
+    let sgx_pck_processor_crl_der_bytes = match &collaterals.sgx_pck_processor_crl_der {
+        Some(der) => der.as_slice(),
+        None => &[],
+    };
+
+    let sgx_pck_platform_crl_der_bytes = match &collaterals.sgx_pck_platform_crl_der {
+        Some(der) => der.as_slice(),
+        None => &[],
+    };
+
+    // get the total length
+    let total_length = 4 * 8 +
+        tcbinfo_bytes.len() +
+        qeidentity_bytes.len() +
+        sgx_intel_root_ca_der_bytes.len() +
+        sgx_tcb_signing_der_bytes.len() +
+        sgx_intel_root_ca_crl_der_bytes.len() +
+        match pck_type {
+            CA::PLATFORM => sgx_pck_platform_crl_der_bytes.len(),
+            CA::PROCESSOR => sgx_pck_processor_crl_der_bytes.len(),
+            _ => 0,
+        };
+
+    // create the vec and copy the data
+    let mut data = Vec::with_capacity(total_length);
+    data.extend_from_slice(&(tcbinfo_bytes.len() as u32).to_le_bytes());
+    data.extend_from_slice(&(qeidentity_bytes.len() as u32).to_le_bytes());
+    data.extend_from_slice(&(sgx_intel_root_ca_der_bytes.len() as u32).to_le_bytes());
+    data.extend_from_slice(&(sgx_tcb_signing_der_bytes.len() as u32).to_le_bytes());
+    data.extend_from_slice(&(0 as u32).to_le_bytes()); // pck_certchain_len == 0
+    data.extend_from_slice(&(sgx_intel_root_ca_crl_der_bytes.len() as u32).to_le_bytes());
+    match pck_type {
+        CA::PLATFORM => {
+            data.extend_from_slice(&(0 as u32).to_le_bytes());
+            data.extend_from_slice(&(sgx_pck_platform_crl_der_bytes.len() as u32).to_le_bytes());
+        }
+        CA::PROCESSOR => {
+            data.extend_from_slice(&(sgx_pck_processor_crl_der_bytes.len() as u32).to_le_bytes());
+            data.extend_from_slice(&(0 as u32).to_le_bytes());
+        }
+        _ => anyhow::bail!("Invalid CA type"),
+    };
+
+    // collateral should only hold one PCK CRL
+
+    data.extend_from_slice(&tcbinfo_bytes);
+    data.extend_from_slice(&qeidentity_bytes);
+    data.extend_from_slice(&sgx_intel_root_ca_der_bytes);
+    data.extend_from_slice(&sgx_tcb_signing_der_bytes);
+    data.extend_from_slice(&sgx_intel_root_ca_crl_der_bytes);
+    match pck_type {
+        CA::PLATFORM => {
+            data.extend_from_slice(&sgx_pck_platform_crl_der_bytes);
+        }
+        CA::PROCESSOR => {
+            data.extend_from_slice(&sgx_pck_processor_crl_der_bytes);
+        }
+        _ => anyhow::bail!("Invalid CA type"),
+    };
+
+    Ok(data)
 }
 
 pub async fn verify_proof(proof: &DcapProof) -> Result<VerifiedOutput> {
