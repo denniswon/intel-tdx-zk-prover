@@ -138,7 +138,8 @@ class TdxProver(Stack):
             vpc=vpc,
             security_groups=[lambda_security_group],
             log_group=log_group,
-            memory_size=1024,  # Increased memory for better performance
+            memory_size=8192,  # Increased memory for better performance
+            ephemeral_storage_size=cdk.Size.mebibytes(2048),  # Increased ephemeral storage for larger payloads
             timeout=Duration.seconds(300),  # Increased timeout to 5 minutes for processing
         )
 
