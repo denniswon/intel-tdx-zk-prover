@@ -2,9 +2,9 @@ use std::str::FromStr;
 
 use anyhow::Result;
 
-use crate::sp1::constants::AUTOMATA_ENCLAVE_ID_DAO_ADDRESS;
-use crate::{config::parameter, sp1::constants::AUTOMATA_DEFAULT_RPC_URL};
-use crate::sp1::utils::remove_prefix_if_found;
+use crate::chain::constants::AUTOMATA_ENCLAVE_ID_DAO_ADDRESS;
+use crate::{config::parameter, chain::constants::AUTOMATA_DEFAULT_RPC_URL};
+use crate::chain::utils::remove_prefix_if_found;
 
 use alloy::{
     primitives::{Address, U256},
@@ -35,18 +35,16 @@ pub enum EnclaveIdType {
 }
 
 pub async fn get_enclave_identity(id: EnclaveIdType, version: u32) -> Result<Vec<u8>> {
-    let verify_only = parameter::get("VERIFY_ONLY");
-    let rpc_url = if verify_only == "true" {
-        AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL")
-    } else {
-        parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
+    let verify_only = parameter::get("VERIFY_ONLY") == "true";
+    let rpc_url = match verify_only {
+        true => AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL"),
+        false => parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
     };
-    let provider = ProviderBuilder::new().connect_http(rpc_url);
+    let provider = ProviderBuilder::new().on_http(rpc_url);
 
-    let enclave_id_dao_address = if verify_only == "true" {
-        Address::from_str(AUTOMATA_ENCLAVE_ID_DAO_ADDRESS).unwrap()
-    } else {
-        parameter::get("ENCLAVE_ID_DAO_ADDRESS").parse::<Address>().unwrap()
+    let enclave_id_dao_address = match verify_only {
+        true => Address::from_str(AUTOMATA_ENCLAVE_ID_DAO_ADDRESS).unwrap(),
+        false => parameter::get("ENCLAVE_ID_DAO_ADDRESS").parse::<Address>().unwrap()
     };
     let enclave_id_dao_contract = IEnclaveIdentityDao::new(
         enclave_id_dao_address,
@@ -64,8 +62,8 @@ pub async fn get_enclave_identity(id: EnclaveIdType, version: u32) -> Result<Vec
 
     let call_return = call_builder.call().await?;
 
-    let identity_str = call_return.identityStr;
-    let signature_bytes = call_return.signature;
+    let identity_str = call_return.enclaveIdObj.identityStr;
+    let signature_bytes = call_return.enclaveIdObj.signature;
 
     if identity_str.is_empty() || signature_bytes.len() == 0 {
         return Err(anyhow::Error::msg(format!(

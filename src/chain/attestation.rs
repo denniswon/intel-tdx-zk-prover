@@ -2,7 +2,7 @@ use alloy::{
     primitives::{Bytes, Uint}, sol, sol_types::{SolInterface, SolValue}
 };
 
-use crate::entity::onchain_request::OnchainRequest;
+use crate::entity::{quote::ProofType, request::OnchainRequest};
 
 sol! {
     interface IAttestation {
@@ -40,18 +40,23 @@ sol! {
     }
 }
 
-pub fn generate_attestation_calldata(output: &[u8], proof: &[u8]) -> Vec<u8> {
+pub fn generate_attestation_calldata(output: &[u8], proof_type: ProofType, proof: &[u8]) -> Vec<u8> {
+    let proof_type = match proof_type {
+        ProofType::Sp1 => IProve::ProofType::SP1ZKP,
+        ProofType::Risc0 => IProve::ProofType::RISC0ZKP,
+    };
+
     IAttestation::IAttestationCalls::verifyAndAttestWithZKProof(
         IAttestation::verifyAndAttestWithZKProofCall {
             output: Bytes::from(output.to_vec()),
-            zk_coprocessor_type: 2,
+            zk_coprocessor_type: proof_type.into(),
             proof: Bytes::from(proof.to_vec()),
         },
     )
     .abi_encode()
 }
 
-pub fn generate_prove_calldata(request: &OnchainRequest, output: &[u8], proof: &[u8]) -> Vec<u8> {
+pub fn generate_prove_calldata(request: &OnchainRequest, proof_type: ProofType, output: &[u8], proof: &[u8]) -> Vec<u8> {
     tracing::info!("Generating proveRequest calldata");
     let request_config = IProve::RequestConfig {
         nonce: Uint::from(request.nonce),
@@ -61,7 +66,10 @@ pub fn generate_prove_calldata(request: &OnchainRequest, output: &[u8], proof: &
         fee: Uint::from(request.fee_wei),
         deadline: Uint::from(request.deadline.timestamp()),
     };
-    let proof_type = IProve::ProofType::SP1ZKP;
+    let proof_type = match proof_type {
+        ProofType::Sp1 => IProve::ProofType::SP1ZKP,
+        ProofType::Risc0 => IProve::ProofType::RISC0ZKP,
+    };
 
     tracing::info!("ProveRequest RequestConfig: {:#?}", request_config);
     tracing::info!("ProveRequest Output: {:#?}", hex::encode(output));
@@ -101,6 +109,6 @@ pub fn concat_with_length_prefix(output: &[u8], proof: &[u8]) -> Vec<u8> {
 }
 
 pub fn decode_attestation_ret_data(ret: Vec<u8>) -> (bool, Vec<u8>) {
-    let (verified, output) = <(bool, Bytes)>::abi_decode_params(&ret).unwrap();
+    let (verified, output) = <(bool, Bytes)>::abi_decode_params(&ret, true).unwrap();
     (verified, output.to_vec())
 }

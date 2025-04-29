@@ -2,9 +2,9 @@ use std::str::FromStr;
 
 use anyhow::Result;
 
-use crate::sp1::constants::AUTOMATA_DEFAULT_RPC_URL;
-use crate::{config::parameter, sp1::constants::AUTOMATA_FMSPC_TCB_DAO_ADDRESS};
-use crate::sp1::utils::remove_prefix_if_found;
+use crate::chain::constants::AUTOMATA_DEFAULT_RPC_URL;
+use crate::{config::parameter, chain::constants::AUTOMATA_FMSPC_TCB_DAO_ADDRESS};
+use crate::chain::utils::remove_prefix_if_found;
 
 use alloy::{
     primitives::{Address, U256},
@@ -27,20 +27,18 @@ sol! {
 }
 
 pub async fn get_tcb_info(tcb_type: u8, fmspc: &str, version: u32) -> Result<Vec<u8>> {
-    let verify_only = parameter::get("VERIFY_ONLY");
-    let rpc_url = if verify_only == "true" {
-        AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL")
-    } else {
-        parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
+    let verify_only = parameter::get("VERIFY_ONLY") == "true";
+    let rpc_url = match verify_only {
+        true => AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL"),
+        false => parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
     };
-    let provider = ProviderBuilder::new().connect_http(rpc_url);
+    let provider = ProviderBuilder::new().on_http(rpc_url);
 
     let fmspc_tcb_dao_contract =
         IFmspcTcbDao::new(
-            if verify_only == "true" {
-                Address::from_str(AUTOMATA_FMSPC_TCB_DAO_ADDRESS).unwrap()
-            } else {
-                parameter::get("FMSPC_TCB_DAO_ADDRESS").parse::<Address>().unwrap()
+            match verify_only {
+                true => Address::from_str(AUTOMATA_FMSPC_TCB_DAO_ADDRESS).unwrap(),
+                false => parameter::get("FMSPC_TCB_DAO_ADDRESS").parse::<Address>().unwrap()
             },
             &provider
         );
@@ -52,8 +50,8 @@ pub async fn get_tcb_info(tcb_type: u8, fmspc: &str, version: u32) -> Result<Vec
     );
 
     let call_return = call_builder.call().await?;
-    let tcb_info_str = call_return.tcbInfoStr;
-    let signature_bytes = call_return.signature;
+    let tcb_info_str = call_return.tcbObj.tcbInfoStr;
+    let signature_bytes = call_return.tcbObj.signature;
 
     if tcb_info_str.is_empty() || signature_bytes.len() == 0 {
         return Err(anyhow::Error::msg(format!(

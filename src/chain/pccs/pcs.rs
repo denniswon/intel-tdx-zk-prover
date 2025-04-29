@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::Result;
 
-use crate::{config::parameter, sp1::constants::{AUTOMATA_DEFAULT_RPC_URL, AUTOMATA_PCS_DAO_ADDRESS}};
+use crate::{config::parameter, chain::constants::{AUTOMATA_DEFAULT_RPC_URL, AUTOMATA_PCS_DAO_ADDRESS}};
 
 use alloy::{primitives::Address, providers::ProviderBuilder, sol};
 
@@ -23,19 +23,17 @@ sol! {
 }
 
 pub async fn get_certificate_by_id(ca_id: IPCSDao::CA) -> Result<(Vec<u8>, Vec<u8>)> {
-    let verify_only = parameter::get("VERIFY_ONLY");
-    let rpc_url = if verify_only == "true" {
-        AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL")
-    } else {
-        parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
+    let verify_only = parameter::get("VERIFY_ONLY") == "true";
+    let rpc_url = match verify_only {
+        true => AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL"),
+        false => parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
     };
-    let provider = ProviderBuilder::new().connect_http(rpc_url);
+    let provider = ProviderBuilder::new().on_http(rpc_url);
 
     let pcs_dao_contract = IPCSDao::new(
-        if verify_only == "true" {
-            Address::from_str(AUTOMATA_PCS_DAO_ADDRESS).unwrap()
-        } else {
-            parameter::get("PCS_DAO_ADDRESS").parse::<Address>().unwrap()
+        match verify_only {
+            true => Address::from_str(AUTOMATA_PCS_DAO_ADDRESS).unwrap(),
+            false => parameter::get("PCS_DAO_ADDRESS").parse::<Address>().unwrap()
         },
         &provider
     );

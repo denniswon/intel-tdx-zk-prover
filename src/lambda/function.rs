@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{str::FromStr, sync::Arc};
 
 use crate::{
     config::{
@@ -8,13 +8,12 @@ use crate::{
     entity::quote::{ProofType, TdxQuoteStatus},
     error::{db_error::DbError, quote_error::QuoteError},
     repository::{quote_repository::QuoteRepositoryTrait, request_repository::OnchainRequestRepositoryTrait},
-    sp1::prove,
-    state::{quote_state::QuoteState, request_state::RequestState}
+    state::{quote_state::QuoteState, request_state::RequestState}, zk,
 };
 use aws_lambda_events::eventbridge::EventBridgeEvent;
 use hex::FromHex;
 use lambda_runtime::{Error, LambdaEvent};
-use sqlx::types::Uuid;
+use serde_json::Value;
 
 pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), Error> {
     // initialize tracing for logging
@@ -25,6 +24,11 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
     let request_id_hex = event.payload.detail.get("request_id").unwrap().as_str().unwrap();
     tracing::info!("Request ID hex: {}", request_id_hex);
     let request_id = Vec::from_hex(request_id_hex.strip_prefix("0x").unwrap_or(request_id_hex))?;
+
+    let default_proof_type = Value::String("sp1".to_string());
+    let proof_type_str = event.payload.detail.get("proof_type").unwrap_or(&default_proof_type).as_str().unwrap();
+    tracing::info!("Proof type: {}", proof_type_str);
+    let proof_type = ProofType::from_str(proof_type_str.to_lowercase().as_str()).unwrap();
 
     let db_conn = Arc::new(
         Database::init()
@@ -42,94 +46,78 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
 
     tracing::info!("Onchain request found: {:#?}", onchain_request);
 
-    let attestation = quote_state.quote_repo.find_by_onchain_request_id(onchain_request.id).await;
-    let mut quote_id: Uuid = Uuid::nil();
-    let result = match attestation {
-        Ok(attestation) => {
-            quote_id = attestation.id;
-            tracing::info!("Attestation found for request ID: {:?} {}", request_id_hex, attestation.status);
-            let proof = prove::prove(attestation.quote.clone(), None).await;
-            match proof {
-                Ok(proof) => {
-                    tracing::info!("Proof generated for request ID: {:?}", request_id_hex);
-                    Ok(proof)
-                }
-                Err(e) => {
-                    tracing::error!("Failed to generate proof for request ID: {:?} {}", request_id_hex, e.to_string());
-                    Err(Box::new(QuoteError::Invalid))
-                }
-            }
-        }
-        _ => {
-            tracing::error!("Attestation not found for request ID: {}", request_id_hex);
-            Err(Box::new(QuoteError::Invalid))
-        }
-    };
+    let attestation = quote_state.quote_repo.find_by_onchain_request_id(onchain_request.id).await.map_err(|e| {
+        tracing::error!("Failed to fetch attestation: {}", e);
+        DbError::SomethingWentWrong("Failed to fetch attestation".to_string())
+    })?;
 
-    match result {
-        Ok(proof) => {
-            // only verify proof in dev because in lambda, filesystem is not writable
-            if std::env::var("ENV").unwrap_or("dev".to_string()) != "prod" {
-                tracing::info!("Verifying proof...");
-                let _ = prove::verify_proof(proof.proof.clone()).await;
-            }
-
-            match prove::submit_proof(onchain_request, proof.proof).await {
-                Ok((verified, verified_output, tx_hash, response)) => {
-                    tracing::info!("Proof submitted for request ID: {} verified: {} verified_output: {}",
-                        request_id_hex, verified, hex::encode(&verified_output));
-                    
-                    if response.is_some() {
-                        tracing::info!("Submit proof response: {:#?}", response);
-                        let response = response.unwrap();
-                        tracing::info!("Transaction hash: {}", hex::encode(&response.transaction_hash));
-
-                        // Update onchain request status
-                        match quote_state.quote_repo.update_status(
-                            quote_id,
-                            response.proof_type,
-                            response.status,
-                            Some(tx_hash.unwrap().to_vec()),
-                            None,
-                        ).await {
-                            Ok(_) => tracing::info!("tdx_quote updated successfully {quote_id} {}", response.status),
-                            Err(e) => tracing::error!("Failed to update quote status on success: {}", e)
-                        }
-                    } else if tx_hash.is_some() {
-                        tracing::info!("Transaction hash: {}", hex::encode(&tx_hash.unwrap()));
-                        // Update onchain request status
-                        match quote_state.quote_repo.update_status(
-                            quote_id,
-                            ProofType::Sp1,
-                            TdxQuoteStatus::Failure,
-                            Some(tx_hash.unwrap().to_vec()),
-                            None,
-                        ).await {
-                            Ok(_) => tracing::info!("tdx_quote updated successfully {quote_id} {}", TdxQuoteStatus::Failure),
-                            Err(e) => tracing::error!("Failed to update quote status on failure: {}", e)
-                        }
-                    }
-                    Ok(())
-                }
-                Err(e) => {
-                    tracing::error!("Failed to submit proof for request ID: {} {}", request_id_hex, e);
-                    match quote_state.quote_repo.update_status(
-                        quote_id,
-                        ProofType::Sp1,
-                        TdxQuoteStatus::Failure,
-                        None,
-                        None,
-                    ).await {
-                        Ok(_) => tracing::info!("tdx_quote updated successfully {quote_id} {}", TdxQuoteStatus::Failure),
-                        Err(e) => tracing::error!("Failed to update quote status on failure: {}", e)
-                    };
-                    Err(e.into())
-                }
-            }
-        }
-        Err(e) => {
-            tracing::error!("Failed to generate proof for request ID: {} {}", request_id_hex, e);
-            Err(e.into())
-        }
+    let quote_id = attestation.id;
+    tracing::info!("Attestation found for request ID: {} {}", request_id_hex, attestation.status);
+    let proof = zk::prove(attestation.quote, proof_type, None).await
+        .map_err(|e| {
+            tracing::error!("Failed to generate proof for request ID: {:?} {}", request_id_hex, e.to_string());
+            QuoteError::Prove
+        })?;
+    
+    tracing::info!("Proof generated for request ID: {:?}", request_id_hex);
+    
+    // only verify proof in dev because in lambda, filesystem is not writable
+    if std::env::var("ENV").unwrap_or("dev".to_string()) != "prod" {
+        tracing::info!("Verifying proof...");
+        
+        zk::verify_proof(&proof.proof).await.map_err(|e| {
+            tracing::error!("Failed to verify proof: {}", e);
+            QuoteError::VerifyProof
+        })?;
+        tracing::info!("Successfully verified proof.");
     }
+
+    let (verified, raw_verified_output, tx_hash, response) =
+        zk::submit_proof(onchain_request, proof_type, proof.proof).await
+            .map_err(|e| {
+                tracing::error!("Failed to submit proof: {}", e);
+                QuoteError::SubmitProof
+            })?;
+
+    tracing::info!(
+        "Proof submitted for request ID: {} verified: {} raw_verified_output: {}",
+        request_id_hex, verified, hex::encode(&raw_verified_output)
+    );
+
+    if response.is_some() {
+        tracing::info!("Submit proof response: {:#?}", response);
+        let response = response.unwrap();
+        tracing::info!("Transaction hash: {}", hex::encode(&response.transaction_hash));
+
+        // Update onchain request status
+        quote_state.quote_repo.update_status(
+            quote_id,
+            proof_type,
+            TdxQuoteStatus::Failure,
+            Some(response.transaction_hash.to_vec()),
+            None,
+        ).await.map_err(|e| {
+            tracing::error!("Failed to update quote status on success: {}", e);
+            QuoteError::UpdateStatusOnSuccess
+        })?;
+
+        tracing::info!("tdx_quote updated successfully {quote_id} {}", TdxQuoteStatus::Success);
+    } else if tx_hash.is_some() {
+        tracing::info!("Transaction hash: {}", hex::encode(&tx_hash.unwrap().to_vec()));
+        // Update onchain request status
+        quote_state.quote_repo.update_status(
+            quote_id,
+            proof_type,
+            TdxQuoteStatus::Failure,
+            Some(tx_hash.unwrap().to_vec()),
+            None,
+        ).await.map_err(|e| {
+            tracing::error!("Failed to update quote status on failure: {}", e);
+            QuoteError::UpdateStatusOnFailure
+        })?;
+
+        tracing::info!("tdx_quote updated successfully {quote_id} {}", TdxQuoteStatus::Failure);
+    }
+
+    Ok(())
 }

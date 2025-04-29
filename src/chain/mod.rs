@@ -2,6 +2,8 @@
 
 pub mod attestation;
 pub mod pccs;
+pub mod constants;
+pub mod utils;
 
 use std::{cmp::max, thread, time::Duration};
 
@@ -52,7 +54,7 @@ impl TxSender {
 
         let provider = ProviderBuilder::new()
             .wallet(self.signer.clone())
-            .connect_http(rpc_url);
+            .on_http(rpc_url);
 
         let tx_request = TransactionRequest::default()
             .with_to(self.contract)
@@ -98,14 +100,10 @@ impl TxSender {
             Some(chain) => ProviderBuilder::new()
                 .wallet(self.signer.clone())
                 .with_chain(chain)
-                .with_cached_nonce_management()
-                .with_gas_estimation()
-                .connect_http(rpc_url),
+                .on_http(rpc_url),
             None => ProviderBuilder::new()
                 .wallet(self.signer.clone())
-                .with_cached_nonce_management()
-                .with_gas_estimation()
-                .connect_http(rpc_url),
+                .on_http(rpc_url),
         };
 
         let chain_id = provider.get_chain_id().await?;
@@ -213,7 +211,7 @@ impl TxSender {
         let rpc_url = self.rpc_url.parse()?;
         let provider = ProviderBuilder::new()
             .wallet(self.signer.clone())
-            .connect_http(rpc_url);
+            .on_http(rpc_url);
 
         let tx = TransactionRequest::default()
             .with_to(self.contract)

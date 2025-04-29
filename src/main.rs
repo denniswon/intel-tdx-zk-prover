@@ -17,7 +17,8 @@ mod repository;
 mod response;
 mod routes;
 mod service;
-mod sp1;
+mod chain;
+mod zk;
 mod state;
 
 #[::tokio::main]

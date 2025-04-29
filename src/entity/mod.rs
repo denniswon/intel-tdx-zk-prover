@@ -1,4 +1,5 @@
 pub mod evm;
 pub mod dcap;
 pub mod quote;
-pub mod onchain_request;
+pub mod request;
+pub mod zk;

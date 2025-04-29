@@ -1,5 +1,5 @@
 use crate::dto::request_dto::RequestReadDto;
-use crate::entity::onchain_request::OnchainRequest;
+use crate::entity::request::OnchainRequest;
 use crate::error::db_error::DbError;
 use crate::error::api_error::ApiError;
 use crate::repository::request_repository::OnchainRequestRepositoryTrait;

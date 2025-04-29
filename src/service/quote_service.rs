@@ -1,11 +1,12 @@
 use crate::config::database::{Database, DatabaseTrait};
 use crate::dto::quote_dto::QuoteRegisterDto;
-use crate::entity::quote::{QuoteType, TdxQuote, TdxQuoteStatus};
+use crate::entity::quote::{ProofType, QuoteType, TdxQuote, TdxQuoteStatus};
+use crate::entity::zk::DcapProof;
 use crate::error::api_error::ApiError;
 use crate::error::db_error::DbError;
 use crate::error::quote_error::QuoteError;
 use crate::repository::quote_repository::{QuoteRepository, QuoteRepositoryTrait};
-use crate::sp1::prove::{prove, verify_proof, DcapProof};
+use crate::zk::{prove, verify_proof};
 
 use dcap_rs::types::quotes::version_4::QuoteV4;
 use dcap_rs::types::VerifiedOutput;
@@ -135,12 +136,12 @@ impl QuoteService {
         Ok(collaterals)
     }
 
-    pub async fn prove(&self, id: Uuid) -> Result<DcapProof, QuoteError> {
+    pub async fn prove(&self, id: Uuid, proof_type: ProofType) -> Result<DcapProof, QuoteError> {
         let quote = self.quote_repo.find(id).await;
 
         match quote {
             Ok(quote) => {
-                let proof = prove(quote.quote, None).await;
+                let proof = prove(quote.quote, proof_type, None).await;
                 match proof {
                     Ok(proof) => Ok(proof.proof),
                     _ => Err(QuoteError::Invalid),
@@ -150,7 +151,7 @@ impl QuoteService {
         }
     }
 
-    pub async fn verify(&self, proof: DcapProof) -> Result<VerifiedOutput, QuoteError> {
+    pub async fn verify(&self, proof: &DcapProof) -> Result<VerifiedOutput, QuoteError> {
         let result = verify_proof(proof).await;
         match result {
             Ok(output) => Ok(output),
@@ -158,7 +159,7 @@ impl QuoteService {
         }
     }
 
-    pub async fn submit_proof(&self, proof: DcapProof) -> Result<VerifiedOutput, QuoteError> {
+    pub async fn submit_proof(&self, proof: &DcapProof) -> Result<VerifiedOutput, QuoteError> {
         let result = verify_proof(proof).await;
         match result {
             Ok(output) => Ok(output),

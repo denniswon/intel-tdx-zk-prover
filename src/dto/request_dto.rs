@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::types::Uuid;
 use validator::Validate;
 
-use crate::entity::onchain_request::OnchainRequest;
+use crate::entity::request::OnchainRequest;
 
 #[derive(Clone, Validate)]
 pub struct RequestDto {
