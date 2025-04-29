@@ -60,13 +60,17 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
         })?;
     
     tracing::info!("Proof generated for request ID: {:?}", request_id_hex);
-    tracing::info!("Verifying proof...");
     
-    zk::verify_proof(&proof.proof).await.map_err(|e| {
-        tracing::error!("Failed to verify proof: {}", e);
-        QuoteError::VerifyProof
-    })?;
-    tracing::info!("Successfully verified proof.");
+    // only verify proof in dev because in lambda, filesystem is not writable
+    if std::env::var("ENV").unwrap_or("dev".to_string()) != "prod" {
+        tracing::info!("Verifying proof...");
+        
+        zk::verify_proof(&proof.proof).await.map_err(|e| {
+            tracing::error!("Failed to verify proof: {}", e);
+            QuoteError::VerifyProof
+        })?;
+        tracing::info!("Successfully verified proof.");
+    }
 
     let (verified, raw_verified_output, tx_hash, response) =
         zk::submit_proof(onchain_request, proof_type, proof.proof).await
