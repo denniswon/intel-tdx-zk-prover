@@ -1,15 +1,15 @@
-use crate::dto::request_dto::RequestReadDto;
-use crate::entity::request::OnchainRequest;
-use crate::error::db_error::DbError;
-use crate::error::api_error::ApiError;
-use crate::repository::request_repository::OnchainRequestRepositoryTrait;
-use crate::response::api_response::ApiSuccessResponse;
-use crate::state::request_state::RequestState;
+use prover::dto::request_dto::RequestReadDto;
+use prover::entity::request::OnchainRequest;
+use prover::error::db_error::DbError;
+use prover::repository::request_repository::OnchainRequestRepositoryTrait;
+use prover::state::request_state::RequestState;
 use axum::{
     extract::{Extension, Path, State},
     Json,
 };
-use sqlx::types::Uuid;
+use uuid::Uuid;
+use crate::error::api_error::ApiError;
+use crate::response::api_response::ApiSuccessResponse;
 
 pub async fn get(
     Extension(request): Extension<OnchainRequest>,

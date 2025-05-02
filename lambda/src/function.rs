@@ -1,6 +1,5 @@
 use std::{str::FromStr, sync::Arc};
-
-use crate::{
+use prover::{
     config::{
         database::{Database, DatabaseTrait},
         parameter,

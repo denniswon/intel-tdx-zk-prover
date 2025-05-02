@@ -48,4 +48,4 @@ fuzz/target/
 !migrations/*.sql
 
 Claude.md
-.env
+**/.env

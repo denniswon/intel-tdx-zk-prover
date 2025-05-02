@@ -1,6 +1,6 @@
-use crate::config::database::Database;
-use crate::state::quote_state::QuoteState;
-use crate::state::request_state::RequestState;
+use prover::config::database::Database;
+use prover::state::quote_state::QuoteState;
+use prover::state::request_state::RequestState;
 use axum::body::Bytes;
 use axum::routing::{IntoMakeService, get};
 use axum::Router;

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use dcap_rs::types::{quotes::body::QuoteBody, TcbStatus, VerifiedOutput};
 use serde::{Deserialize, Serialize};
 

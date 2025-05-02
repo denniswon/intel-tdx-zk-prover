@@ -1,21 +1,20 @@
-use crate::dto::quote_dto::QuoteReadDto;
-use crate::entity::zk::DcapProof;
-use crate::{dto::quote_dto::QuoteRegisterDto, error::api_request_error::ValidatedRequest};
-use crate::entity::quote::{ProofType, TdxQuote};
-use crate::entity::dcap::DcapVerifiedOutput;
-use crate::error::db_error::DbError;
-use crate::error::api_error::ApiError;
-use crate::repository::quote_repository::QuoteRepositoryTrait;
-use crate::response::api_response::ApiSuccessResponse;
-use crate::state::quote_state::QuoteState;
+use prover::dto::quote_dto::QuoteReadDto;
+use prover::entity::zk::DcapProof;
+use prover::dto::quote_dto::QuoteRegisterDto;
+use prover::entity::quote::{ProofType, TdxQuote};
+use prover::entity::dcap::DcapVerifiedOutput;
+use prover::error::db_error::DbError;
+use prover::repository::quote_repository::QuoteRepositoryTrait;
+use prover::state::quote_state::QuoteState;
 use axum::extract::Query;
 use axum::{
     extract::{Extension, Path, State},
     Json,
 };
 use serde::Deserialize;
-use sqlx::types::Uuid;
-
+use uuid::Uuid;
+use crate::error::{api_error::ApiError, api_request_error::ValidatedRequest};
+use crate::response::api_response::ApiSuccessResponse;
 
 pub async fn get(
     Extension(quote): Extension<TdxQuote>,

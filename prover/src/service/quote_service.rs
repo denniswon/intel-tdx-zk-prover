@@ -2,7 +2,6 @@ use crate::config::database::{Database, DatabaseTrait};
 use crate::dto::quote_dto::QuoteRegisterDto;
 use crate::entity::quote::{ProofType, QuoteType, TdxQuote, TdxQuoteStatus};
 use crate::entity::zk::DcapProof;
-use crate::error::api_error::ApiError;
 use crate::error::db_error::DbError;
 use crate::error::quote_error::QuoteError;
 use crate::repository::quote_repository::{QuoteRepository, QuoteRepositoryTrait};
@@ -36,7 +35,7 @@ impl QuoteService {
         }
     }
 
-    pub async fn create_quote(&self, payload: QuoteRegisterDto) -> Result<TdxQuote, ApiError> {
+    pub async fn create_quote(&self, payload: QuoteRegisterDto) -> Result<TdxQuote, DbError> {
         let quote = self.add_quote(payload).await;
 
         match quote {

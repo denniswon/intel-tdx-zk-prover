@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::config::database::Database;
 use crate::repository::quote_repository::{QuoteRepository, QuoteRepositoryTrait};
 use crate::service::quote_service::QuoteService;
@@ -5,8 +6,8 @@ use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct QuoteState {
-    pub(crate) quote_service: QuoteService,
-    pub(crate) quote_repo: QuoteRepository,
+    pub quote_service: QuoteService,
+    pub quote_repo: QuoteRepository,
 }
 
 impl QuoteState {

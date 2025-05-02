@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use crate::config::database::Database;
 use crate::repository::request_repository::{OnchainRequestRepository, OnchainRequestRepositoryTrait};
 use crate::service::request_service::RequestService;
