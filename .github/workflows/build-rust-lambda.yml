@@ -53,18 +53,18 @@ jobs:
       run: |
         cargo lambda build --output-format zip
         pwd
-        ls -ltrh ./target/lambda/tdx-prover/
+        ls -ltrh ./target/lambda/lambda/
 
     # Upload the Lambda zip as an artifact
     - name: Upload Lambda zip
       uses: actions/upload-artifact@v4
       with:
         name: rust-lambda-zip
-        path: ./target/lambda/tdx-prover/
+        path: ./target/lambda/lambda/
         retention-days: 1
 
     # Set output for the zip path
     - name: Set output
       id: set_output
       run: |
-        echo "lambda_zip_path=./target/lambda/tdx-prover/" >> $GITHUB_OUTPUT 
+        echo "lambda_zip_path=./target/lambda/lambda/" >> $GITHUB_OUTPUT 

@@ -116,9 +116,8 @@ class TdxProver(Stack):
             function_name=f"{APP_SHORTNAME}-rust-lambda",
             runtime=_lambda.Runtime.PROVIDED_AL2023,
             handler="bootstrap",
-            code=_lambda.Code.from_asset("../target/lambda/tdx-prover/bootstrap.zip"),
+            code=_lambda.Code.from_asset("../target/lambda/lambda/bootstrap.zip"),
             environment={
-                "LAMBDA": "true",
                 "DATABASE_URL": self.service_secrets.secret_value_from_json("DATABASE_URL").unsafe_unwrap(),
                 "RUST_BACKTRACE": "1",  # Enable backtraces for better debugging
                 "DEFAULT_RPC_URL": "https://dimensional-attentive-choice.base-mainnet.quiknode.pro/db9e914af47f152dbd6d6f4d60fdf17bc1175485",
@@ -133,7 +132,7 @@ class TdxProver(Stack):
                 "PROVER_PRIVATE_KEY": self.service_secrets.secret_value_from_json("PROVER_PRIVATE_KEY").unsafe_unwrap(),
                 "SQLX_OFFLINE": "true",
                 "ENV": "prod",
-                "RUST_LOG": "debug",
+                "RUST_LOG": "info",
             },
             vpc=vpc,
             security_groups=[lambda_security_group],
