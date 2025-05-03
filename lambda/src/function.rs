@@ -16,6 +16,8 @@ use serde_json::Value;
 
 #[tracing::instrument(skip(event), fields(req_id = %event.payload.detail.get("request_id").unwrap().as_str().unwrap()))]
 pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), Error> {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     tracing::info!("Event: {:?}", event);
     parameter::init();
 

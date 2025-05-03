@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy = "0.12.6"
+alloy = { version = "0.12.6", features = ["full"] }
 alloy-chains = "0.1.69"
 anyhow = { workspace = true }
 async-trait = { workspace = true }
