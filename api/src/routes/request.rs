@@ -1,4 +1,4 @@
-use prover::state::request_state::RequestState;
+use tdx_prover::state::request_state::RequestState;
 use axum::{routing::get, Router};
 
 use crate::handler::request_handler;

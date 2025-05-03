@@ -2,23 +2,19 @@ use std::fs::File;
 use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use aws_config::meta::region::RegionProviderChain;
-use aws_config::BehaviorVersion;
-use aws_sdk_eventbridge::types::PutEventsRequestEntry;
-use aws_sdk_eventbridge::Client;
-use lambda_runtime::Error;
 use rand::Rng;
 
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use prover::entity::{quote::{ProofType, TdxQuoteStatus}, zk::ProofSystem};
-use prover::state::request_state::RequestState;
-use prover::config::database::{Database, DatabaseTrait};
-use prover::repository::request_repository::{OnchainRequestRepositoryTrait, OnchainRequestId};
+use tdx_prover::entity::{quote::{ProofType, TdxQuoteStatus}, zk::ProofSystem};
+use tdx_prover::state::request_state::RequestState;
+use tdx_prover::config::database::{Database, DatabaseTrait};
+use tdx_prover::repository::request_repository::{OnchainRequestRepositoryTrait, OnchainRequestId};
 use hex::FromHex;
-use prover::config::parameter;
+use tdx_prover::config::parameter;
 
 mod prove;
+mod aws;
 
 #[derive(Parser)]
 #[command(name = "TDXProver")]
@@ -288,8 +284,11 @@ async fn main() -> Result<()> {
             
             let onchain_request_ids = fetch_onchain_request_ids(Some(quote_status), count).await;
 
+            let (client, region) = aws::init_aws().await;
+            let client = Arc::new(client);
+            
             for request_id in onchain_request_ids {
-                println!("Requesting tdx-prover lambda for request: {}", hex::encode(&request_id.request_id));
+                println!("Invoking tdx-prover lambda for request: {}", hex::encode(&request_id.request_id));
 
                 let proof_type = match args.proof_type {
                     Some(proof_type) => match proof_type {
@@ -307,12 +306,25 @@ async fn main() -> Result<()> {
                     }
                 };
 
-                let region_provider = RegionProviderChain::default_provider().or_else("us-west-2");
-                let config = aws_config::defaults(BehaviorVersion::latest())
-                    .region(region_provider).load().await;
-                let client = Arc::new(Client::new(&config));
+                let request_id_hex = hex::encode(&request_id.request_id);
+                match aws::invoke_tdx_prover_lambda(
+                    &client,
+                    "tdx-prover-rust-lambda",
+                    &region,
+                    request_id.request_id,
+                    proof_type
+                ).await {
+                    Ok(response) => {
+                        println!("Lambda response status code for request {}: {}", request_id_hex, response.status_code());
+                        if std::env::var("DEBUG").is_ok() {
+                            println!("Lambda response for request {}: {:#?}", request_id_hex, response);
+                        }
+                    },
+                    Err(e) => {
+                        println!("Failed to invoke tdx-prover lambda for request {}: {}", request_id_hex, e);
+                    }
+                }
 
-                let _ = request_tdx_prover_lambda(&client, request_id.request_id, proof_type).await;
                 tokio::time::sleep(tokio::time::Duration::from_millis(delay_milliseconds)).await;
             }
             println!("Finished load testing tdx-prover lambda");
@@ -351,31 +363,4 @@ async fn fetch_onchain_request_ids(status: Option<TdxQuoteStatus>, count: u64) -
     request_state.request_repo
         .find_request_ids_by_status(status, Some(count as i64))
         .await    
-}
-
-async fn request_tdx_prover_lambda(client: &Arc<Client>, request_id: Vec<u8>, proof_type: ProofType) -> Result<(), Error> {
-    let source = "com.magic.newton";
-    let detail_type = "tdx-prover";
-    let detail = format!(r#"{{"request_id": "{}", "proof_type": "{}"}}"#, hex::encode(&request_id), proof_type);
-    let event_bus_name = "tdx-prover-bus";
-    
-    client
-        .put_events()
-        .entries(
-            PutEventsRequestEntry::builder()
-                .event_bus_name(event_bus_name)
-                .source(source)
-                .detail_type(detail_type)
-                .detail(detail)
-                .build()
-        )
-        .send()
-        .await
-        .map_err(|e| {
-            println!("Failed to request tdx-prover lambda: {}", e);
-            Error::from(e)
-        })?;
-    
-    println!("Successfully requested tdx-prover lambda for request: {}", hex::encode(&request_id));
-    Ok(())
 }

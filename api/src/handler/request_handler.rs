@@ -1,8 +1,8 @@
-use prover::dto::request_dto::RequestReadDto;
-use prover::entity::request::OnchainRequest;
-use prover::error::db_error::DbError;
-use prover::repository::request_repository::OnchainRequestRepositoryTrait;
-use prover::state::request_state::RequestState;
+use tdx_prover::dto::request_dto::RequestReadDto;
+use tdx_prover::entity::request::OnchainRequest;
+use tdx_prover::error::db_error::DbError;
+use tdx_prover::repository::request_repository::OnchainRequestRepositoryTrait;
+use tdx_prover::state::request_state::RequestState;
 use axum::{
     extract::{Extension, Path, State},
     Json,

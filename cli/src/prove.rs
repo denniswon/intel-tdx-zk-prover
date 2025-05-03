@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use anyhow::Error;
-use prover::{
+use tdx_prover::{
     config::database::{Database, DatabaseTrait},
     entity::quote::{ProofType, TdxQuoteStatus},
     entity::zk::ProofSystem,

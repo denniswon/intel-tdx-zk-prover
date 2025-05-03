@@ -1,4 +1,4 @@
-use prover::error::{
+use tdx_prover::error::{
     db_error::DbError,
     quote_error::QuoteError,
     request_error::RequestError,

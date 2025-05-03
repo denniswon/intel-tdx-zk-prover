@@ -1,11 +1,11 @@
-use prover::dto::quote_dto::QuoteReadDto;
-use prover::entity::zk::DcapProof;
-use prover::dto::quote_dto::QuoteRegisterDto;
-use prover::entity::quote::{ProofType, TdxQuote};
-use prover::entity::dcap::DcapVerifiedOutput;
-use prover::error::db_error::DbError;
-use prover::repository::quote_repository::QuoteRepositoryTrait;
-use prover::state::quote_state::QuoteState;
+use tdx_prover::dto::quote_dto::QuoteReadDto;
+use tdx_prover::entity::zk::DcapProof;
+use tdx_prover::dto::quote_dto::QuoteRegisterDto;
+use tdx_prover::entity::quote::{ProofType, TdxQuote};
+use tdx_prover::entity::dcap::DcapVerifiedOutput;
+use tdx_prover::error::db_error::DbError;
+use tdx_prover::repository::quote_repository::QuoteRepositoryTrait;
+use tdx_prover::state::quote_state::QuoteState;
 use axum::extract::Query;
 use axum::{
     extract::{Extension, Path, State},

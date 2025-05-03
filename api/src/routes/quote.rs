@@ -1,4 +1,4 @@
-use prover::state::quote_state::QuoteState;
+use tdx_prover::state::quote_state::QuoteState;
 use axum::{routing::{get, post}, Router};
 
 use crate::handler::quote_handler;

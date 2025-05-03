@@ -120,7 +120,7 @@ class TdxProver(Stack):
             environment={
                 "DATABASE_URL": self.service_secrets.secret_value_from_json("DATABASE_URL").unsafe_unwrap(),
                 "RUST_BACKTRACE": "1",  # Enable backtraces for better debugging
-                "DEFAULT_RPC_URL": "https://dimensional-attentive-choice.base-mainnet.quiknode.pro/db9e914af47f152dbd6d6f4d60fdf17bc1175485",
+                "DEFAULT_RPC_URL": self.service_secrets.secret_value_from_json("DEFAULT_RPC_URL").unsafe_unwrap(),
                 "DEFAULT_DCAP_CONTRACT": "0xd338AF1E0Af0ca7A31752Ae2ac0e16B2cB64F78a" if deploy_env == "prod" else "0x9E4a45c40e06CE0653C33769138dF48802c1CF1e",
                 "ENCLAVE_ID_DAO_ADDRESS": "0xd74e880029cd3b6b434f16bea5f53a06989458ee",
                 "FMSPC_TCB_DAO_ADDRESS": "0xd3a3f34e8615065704ccb5c304c0ced41bb81483",
@@ -130,6 +130,9 @@ class TdxProver(Stack):
                 "SP1_PROVER": "network",
                 "NETWORK_PRIVATE_KEY": self.service_secrets.secret_value_from_json("NETWORK_PRIVATE_KEY").unsafe_unwrap(),
                 "PROVER_PRIVATE_KEY": self.service_secrets.secret_value_from_json("PROVER_PRIVATE_KEY").unsafe_unwrap(),
+                "BONSAI_API_KEY": self.service_secrets.secret_value_from_json("BONSAI_API_KEY").unsafe_unwrap(),
+                "BONSAI_API_URL": "https://api.bonsai.xyz/",
+                "RISC_ZERO_VERSION": "1.2.4",
                 "SQLX_OFFLINE": "true",
                 "ENV": "prod",
                 "RUST_LOG": "info",

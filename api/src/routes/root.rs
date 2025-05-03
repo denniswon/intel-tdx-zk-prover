@@ -1,6 +1,6 @@
-use prover::config::database::Database;
-use prover::state::quote_state::QuoteState;
-use prover::state::request_state::RequestState;
+use tdx_prover::config::database::Database;
+use tdx_prover::state::quote_state::QuoteState;
+use tdx_prover::state::request_state::RequestState;
 use axum::body::Bytes;
 use axum::routing::{IntoMakeService, get};
 use axum::Router;

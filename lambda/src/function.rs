@@ -1,5 +1,5 @@
 use std::{str::FromStr, sync::Arc};
-use prover::{
+use tdx_prover::{
     config::{
         database::{Database, DatabaseTrait},
         parameter,

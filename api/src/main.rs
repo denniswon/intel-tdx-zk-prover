@@ -1,7 +1,7 @@
 use std::sync::Arc;
-use tracing::{info, Level};
-use prover::config::database::{Database, DatabaseTrait};
-use prover::config::parameter;
+use tracing::info;
+use tdx_prover::config::database::{Database, DatabaseTrait};
+use tdx_prover::config::parameter;
 
 mod error;
 mod handler;
@@ -14,7 +14,7 @@ async fn main() {
     parameter::init();
 
     // initialize tracing for logging
-    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
+    tracing_subscriber::fmt().init();
 
     let connection = Database::init()
         .await
