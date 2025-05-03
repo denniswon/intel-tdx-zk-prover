@@ -121,27 +121,31 @@ impl OnchainRequestRepositoryTrait for OnchainRequestRepository {
         match status {
             Some(status) => {
                 match max_count {
-                    Some(count) => sqlx::query_as::<_, OnchainRequestId>(
+                    Some(count) => sqlx::query_as!(
+                        OnchainRequestId,
                         r#"SELECT onchain_request.request_id
                         FROM onchain_request
                         JOIN tdx_quote
                         ON onchain_request.id = tdx_quote.onchain_request_id
-                        WHERE tdx_quote.status = ?
+                        WHERE tdx_quote.status = $1
                         ORDER BY tdx_quote.created_at DESC
-                        LIMIT ?"#)
-                        .bind(status)
-                        .bind(count)
+                        LIMIT $2"#,
+                        status as TdxQuoteStatus,
+                        count
+                    )
                         .fetch_all(self.db_conn.get_pool())
                         .await
                         .unwrap_or(vec![]),
-                    None => sqlx::query_as::<_, OnchainRequestId>(
+                    None => sqlx::query_as!(
+                        OnchainRequestId,
                         r#"SELECT onchain_request.request_id
                         FROM onchain_request
                         JOIN tdx_quote
                         ON onchain_request.id = tdx_quote.onchain_request_id
-                        WHERE tdx_quote.status = ?
-                        ORDER BY tdx_quote.created_at DESC"#)
-                        .bind(status)
+                        WHERE tdx_quote.status = $1
+                        ORDER BY tdx_quote.created_at DESC"#,
+                        status as TdxQuoteStatus
+                    )
                         .fetch_all(self.db_conn.get_pool())
                         .await
                         .unwrap_or(vec![]),
@@ -149,18 +153,21 @@ impl OnchainRequestRepositoryTrait for OnchainRequestRepository {
             }
             None => {
                 match max_count {
-                    Some(count) => sqlx::query_as::<_, OnchainRequestId>(
+                    Some(count) => sqlx::query_as!(
+                        OnchainRequestId,
                         r#"SELECT onchain_request.request_id
                         FROM onchain_request
                         JOIN tdx_quote
                         ON onchain_request.id = tdx_quote.onchain_request_id
                         ORDER BY tdx_quote.created_at DESC
-                        LIMIT ?"#)
-                        .bind(count)
+                        LIMIT $1"#,
+                        count
+                    )
                         .fetch_all(self.db_conn.get_pool())
                         .await
                         .unwrap_or(vec![]),
-                    None => sqlx::query_as::<_, OnchainRequestId>(
+                    None => sqlx::query_as!(
+                        OnchainRequestId,
                         r#"SELECT onchain_request.request_id
                         FROM onchain_request
                         JOIN tdx_quote

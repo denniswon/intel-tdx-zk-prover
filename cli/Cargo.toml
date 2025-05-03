@@ -5,8 +5,11 @@ edition = "2021"
 
 [dependencies]
 anyhow = { workspace = true }
+aws-config = "1.6.2"
+aws-sdk-eventbridge = "1.70.0"
 clap = { version = "4.0.16", features = ["derive"] }
 hex = { workspace = true }
+lambda_runtime = "0.13.0"
 prover = { path = "../prover" }
 rand = { workspace = true }
 serde = { workspace = true }

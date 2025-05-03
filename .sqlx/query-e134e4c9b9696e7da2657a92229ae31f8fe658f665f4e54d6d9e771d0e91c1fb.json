@@ -1,0 +1,33 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT onchain_request.request_id\n                        FROM onchain_request\n                        JOIN tdx_quote\n                        ON onchain_request.id = tdx_quote.onchain_request_id\n                        WHERE tdx_quote.status = $1\n                        ORDER BY tdx_quote.created_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "request_id",
+        "type_info": "Bytea"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        {
+          "Custom": {
+            "name": "tdxquotestatus",
+            "kind": {
+              "Enum": [
+                "pending",
+                "failure",
+                "success"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e134e4c9b9696e7da2657a92229ae31f8fe658f665f4e54d6d9e771d0e91c1fb"
+}

@@ -2,6 +2,11 @@ use std::fs::File;
 use std::io::{BufReader, BufRead};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use aws_config::meta::region::RegionProviderChain;
+use aws_config::BehaviorVersion;
+use aws_sdk_eventbridge::types::PutEventsRequestEntry;
+use aws_sdk_eventbridge::Client;
+use lambda_runtime::Error;
 use rand::Rng;
 
 use anyhow::Result;
@@ -51,6 +56,9 @@ enum Commands {
 
     /// Load tests the prover flow
     LoadTest(LoadTestArgs),
+
+    /// Load tests the remote prover flow in lambda
+    LoadTestLambda(LoadTestLambdaArgs),
 }
 
 /// Enum representing the available proof types
@@ -90,7 +98,7 @@ struct ProveArgs {
     proof_type: Option<ProofTypeArg>,
 
     #[arg(
-        short = 's',
+        short = 'z',
         long = "proof-system",
         value_enum,
         default_value = "groth16"
@@ -131,7 +139,7 @@ struct LoadTestArgs {
     proof_type: Option<ProofTypeArg>,
 
     #[arg(
-        short = 's',
+        short = 'z',
         long = "proof-system",
         value_enum,
         default_value = "groth16"
@@ -147,7 +155,37 @@ struct LoadTestArgs {
     verify_only: Option<bool>,
 
     #[arg(
-        short = 'q',
+        short = 's',
+        long = "quote-status",
+        value_enum,
+        default_value = "pending"
+    )]
+    quote_status: Option<TdxQuoteStatusArg>,
+}
+
+#[derive(Args, Debug)]
+struct LoadTestLambdaArgs {
+    #[arg(
+        short = 'c',
+        long = "count",
+        default_value = "10",
+        help = "Number of requests from db to load test if input_file is not specified"
+    )]
+    count: Option<u64>,
+
+    #[arg(short = 'd', long = "delay-milliseconds", default_value = "1000")]
+    delay_milliseconds: Option<u64>,
+
+    #[arg(
+        short = 't',
+        long = "proof-type",
+        value_enum,
+        help = "If not specified, chosen randomly"
+    )]
+    proof_type: Option<ProofTypeArg>,
+
+    #[arg(
+        short = 's',
         long = "quote-status",
         value_enum,
         default_value = "pending"
@@ -234,6 +272,52 @@ async fn main() -> Result<()> {
             println!("Finished load testing");
             Ok(())
         }
+        Commands::LoadTestLambda(args) => {
+            let count = args.count.unwrap_or(10);
+
+            let delay_milliseconds = args.delay_milliseconds.unwrap_or(1000);
+
+            let quote_status = match args.quote_status.unwrap_or(TdxQuoteStatusArg::Pending) {
+                TdxQuoteStatusArg::Pending => TdxQuoteStatus::Pending,
+                TdxQuoteStatusArg::Failure => TdxQuoteStatus::Failure,
+                TdxQuoteStatusArg::Success => TdxQuoteStatus::Success,
+            };
+
+            println!("Load testing tdx-prover lambda function (count: {}, delay_milliseconds: {}, quote_status: {})",
+                count, delay_milliseconds, quote_status);
+            
+            let onchain_request_ids = fetch_onchain_request_ids(Some(quote_status), count).await;
+
+            for request_id in onchain_request_ids {
+                println!("Requesting tdx-prover lambda for request: {}", hex::encode(&request_id.request_id));
+
+                let proof_type = match args.proof_type {
+                    Some(proof_type) => match proof_type {
+                        ProofTypeArg::Sp1 => ProofType::Sp1,
+                        ProofTypeArg::Risc0 => ProofType::Risc0,
+                    },
+                    None => {
+                        let mut rng = rand::rng();
+                        let random_bool: bool = rng.random();
+                        if random_bool {
+                            ProofType::Sp1
+                        } else {
+                            ProofType::Risc0
+                        }
+                    }
+                };
+
+                let region_provider = RegionProviderChain::default_provider().or_else("us-west-2");
+                let config = aws_config::defaults(BehaviorVersion::latest())
+                    .region(region_provider).load().await;
+                let client = Arc::new(Client::new(&config));
+
+                let _ = request_tdx_prover_lambda(&client, request_id.request_id, proof_type).await;
+                tokio::time::sleep(tokio::time::Duration::from_millis(delay_milliseconds)).await;
+            }
+            println!("Finished load testing tdx-prover lambda");
+            Ok(())
+        }
     }
 }
 
@@ -267,4 +351,31 @@ async fn fetch_onchain_request_ids(status: Option<TdxQuoteStatus>, count: u64) -
     request_state.request_repo
         .find_request_ids_by_status(status, Some(count as i64))
         .await    
+}
+
+async fn request_tdx_prover_lambda(client: &Arc<Client>, request_id: Vec<u8>, proof_type: ProofType) -> Result<(), Error> {
+    let source = "com.magic.newton";
+    let detail_type = "tdx-prover";
+    let detail = format!(r#"{{"request_id": "{}", "proof_type": "{}"}}"#, hex::encode(&request_id), proof_type);
+    let event_bus_name = "tdx-prover-bus";
+    
+    client
+        .put_events()
+        .entries(
+            PutEventsRequestEntry::builder()
+                .event_bus_name(event_bus_name)
+                .source(source)
+                .detail_type(detail_type)
+                .detail(detail)
+                .build()
+        )
+        .send()
+        .await
+        .map_err(|e| {
+            println!("Failed to request tdx-prover lambda: {}", e);
+            Error::from(e)
+        })?;
+    
+    println!("Successfully requested tdx-prover lambda for request: {}", hex::encode(&request_id));
+    Ok(())
 }
