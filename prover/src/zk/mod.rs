@@ -228,11 +228,12 @@ pub async fn submit_proof(
     request: OnchainRequest,
     proof_type: ProofType,
     proof: DcapProof,
+    verify_only: Option<bool>,
 ) -> Result<(bool, Vec<u8>, Option<TxHash>, Option<SubmitProofResponse>)> {
     // Send the calldata to Ethereum.
     tracing::info!("Submitting proofs to on-chain DCAP contract to be verified...");
 
-    let verify_only = parameter::get("VERIFY_ONLY");
+    let verify_only = verify_only.unwrap_or(false);
 
     let verified_output = proof.verified_output;
     let (program_output, proof) = match proof.proof {
@@ -240,8 +241,8 @@ pub async fn submit_proof(
         ZkvmProof::Risc0((receipt, _image_id, seal)) => (receipt.journal.bytes, seal)
     };
 
-    match verify_only.as_str() {
-        "true" => {
+    match verify_only {
+        true => {
             tracing::info!("Verify only mode enabled");
 
             let tx_sender = TxSender::new(
@@ -267,7 +268,7 @@ pub async fn submit_proof(
             tracing::error!("On-chain verification fail!");
             Ok((chain_verified, chain_raw_verified_output, None, None))
         },
-        _ => {
+        false => {
             tracing::info!("Submitting proof transaction...");
 
             let tx_sender = TxSender::new(

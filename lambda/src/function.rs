@@ -71,8 +71,10 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
         tracing::info!("Successfully verified proof.");
     }
 
+    let verify_only = parameter::get("VERIFY_ONLY").to_lowercase() == "true";
+
     let (verified, raw_verified_output, tx_hash, response) =
-        zk::submit_proof(onchain_request, proof_type, proof.proof).await
+        zk::submit_proof(onchain_request, proof_type, proof.proof, Some(verify_only)).await
             .map_err(|e| {
                 tracing::error!("Failed to submit proof: {}", e);
                 QuoteError::SubmitProof

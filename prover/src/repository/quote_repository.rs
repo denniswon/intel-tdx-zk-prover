@@ -5,6 +5,7 @@ use async_trait::async_trait;
 use sqlx::types::Uuid;
 use crate::error::db_error::DbError;
 use std::sync::Arc;
+use crate::repository::request_repository::OnchainRequestId;
 
 #[derive(Clone)]
 pub struct QuoteRepository {
@@ -28,6 +29,11 @@ pub trait QuoteRepositoryTrait {
         transaction_hash: Option<Vec<u8>>,
         prover_request_id: Option<Vec<u8>>
     ) -> Result<(), DbError>;
+    async fn find_request_ids_by_status(
+        &self,
+        status: Option<TdxQuoteStatus>,
+        max_count: Option<i64>
+    ) -> Vec<OnchainRequestId>;
 }
 
 #[async_trait]
@@ -154,5 +160,52 @@ impl QuoteRepositoryTrait for QuoteRepository {
             }
         }
         Ok(())
+    }
+
+    async fn find_request_ids_by_status(
+        &self,
+        status: Option<TdxQuoteStatus>,
+        max_count: Option<i64>
+    ) -> Vec<OnchainRequestId> {
+        match status {
+            Some(status) => {
+                let quotes = match max_count {
+                    Some(count) => sqlx::query_as::<_, OnchainRequestId>(
+                            r#"SELECT onchain_request_id FROM tdx_quote WHERE status = ? LIMIT ?"#
+                        )
+                        .bind(status)
+                        .bind(count)
+                        .fetch_all(self.db_conn.get_pool())
+                        .await
+                        .unwrap_or(vec![]),
+                    None => sqlx::query_as::<_, OnchainRequestId>(
+                            r#"SELECT onchain_request_id FROM tdx_quote WHERE status = ?"#
+                        )
+                        .bind(status)
+                        .fetch_all(self.db_conn.get_pool())
+                        .await
+                        .unwrap_or(vec![]),
+                };
+                return quotes;
+            },
+            None => {
+                let quotes = match max_count {
+                    Some(count) => sqlx::query_as::<_, OnchainRequestId>(
+                            r#"SELECT onchain_request_id FROM tdx_quote LIMIT ? ORDER BY created_at DESC"#
+                        )
+                        .bind(count)
+                        .fetch_all(self.db_conn.get_pool())
+                        .await
+                        .unwrap_or(vec![]),
+                    None => sqlx::query_as::<_, OnchainRequestId>(
+                            r#"SELECT onchain_request_id FROM tdx_quote ORDER BY created_at DESC"#
+                        )
+                        .fetch_all(self.db_conn.get_pool())
+                        .await
+                        .unwrap_or(vec![]),
+                };
+                return quotes;
+            },
+        }
     }
 }

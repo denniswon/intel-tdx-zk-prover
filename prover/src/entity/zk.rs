@@ -14,7 +14,8 @@ pub const DCAP_SP1_ELF: &[u8] = include_bytes!("../../elf/dcap-sp1");
 pub const DCAP_RISC0_ELF: &[u8] = include_bytes!("../../elf/guest");
 
 /// Enum representing the available proof systems
-#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(strum_macros::Display, Debug, Clone, Copy, PartialEq, Eq)]
+#[strum(serialize_all = "lowercase")]
 pub enum ProofSystem {
     Groth16,
     Plonk,
