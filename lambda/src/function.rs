@@ -14,9 +14,8 @@ use hex::FromHex;
 use lambda_runtime::{Error, LambdaEvent};
 use serde_json::Value;
 
+#[tracing::instrument(skip(event), fields(req_id = %event.payload.detail.get("request_id").unwrap().as_str().unwrap()))]
 pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), Error> {
-    // initialize tracing for logging
-    tracing_subscriber::fmt().init();
     tracing::info!("Event: {:?}", event);
     parameter::init();
 

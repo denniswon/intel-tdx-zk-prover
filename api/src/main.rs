@@ -9,7 +9,7 @@ mod middleware;
 mod response;
 mod routes;
 
-#[::tokio::main]
+#[tokio::main]
 async fn main() {
     parameter::init();
 
