@@ -46,8 +46,8 @@ pub(crate) async fn handler(
             QuoteError::Prove
         })?;
     
-    println!("Proof generated for request ID: {:?}", request_id_hex);
-    
+    println!("Proof generated for request ID: {:?} {:#?}", request_id_hex, proof.proof);
+
     // only verify proof in dev because in lambda, filesystem is not writable
     if std::env::var("ENV").unwrap_or("dev".to_string()) != "prod" {
         println!("Verifying proof...");

@@ -47,7 +47,7 @@ pub struct DcapProof {
     pub proof: ZkvmProof,
 }
 
-#[derive(Clone, Validate)]
+#[derive(Clone, Validate, Debug)]
 pub struct ProofResponse {
     pub proof: DcapProof,
     pub proof_type: ProofType,

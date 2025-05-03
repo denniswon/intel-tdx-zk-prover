@@ -18,7 +18,27 @@ mod prove;
 #[derive(Parser)]
 #[command(name = "TDXProver")]
 #[command(version = "0.1.0")]
-#[command(about = "TDX Prover CLI to fetch onchain_requests from db, generate proofs using either sp1 or risc0, then submit on-chain")]
+#[command(about = r#"
+|-----------------------------------------------------------------------------|
+|      _______  _______  __   __     _______  _______  _______  ______        |
+|     |       ||       ||  | |  |   |       ||       ||       ||    _ |       |
+|     |    ___||   _   ||  |_|  |   |    ___||    ___||    ___||   | ||       |
+|     |   |___ |  | |  ||       |   |   |___ |   |___ |   |___ |   |_||_      |
+|     |    ___||  |_|  ||       |   |    ___||    ___||    ___||    __  |     |
+|     |   |    |       | |     |    |   |    |   |    |   |___ |   |  | |     |
+|     |___|    |_______|  |___|     |___|    |___|    |_______||___|  |_|     |
+|                                                                             |
+|           TDX PROVER CLI — Trustless Proofs, Verified Execution             |
+|                                                                             |
+|       Fetch requests, generate sp1 or risc0 proofs, & submit on-chain.      |
+|-----------------------------------------------------------------------------|
+"#)]
+#[command(after_help = r#"
+                       ╔═══════════════════════════════╗
+                       ║        PROOF COMPLETE         ║
+                       ║   Trust, but verify — TDX+ZK  ║
+                       ╚═══════════════════════════════╝
+"#)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -29,7 +49,7 @@ enum Commands {
     /// Proves a TDX quote and submits it on-chain
     Prove(ProveArgs),
 
-    /// Load tests the prover flow by putting events to tdx-prover event bus
+    /// Load tests the prover flow
     LoadTest(LoadTestArgs),
 }
 
@@ -81,7 +101,7 @@ struct ProveArgs {
         short = 'v',
         long = "verify-only",
         default_value = "false",
-        help = "If true, make staticcall to automata testnet contract instead"
+        help = "If true, make static call to automata testnet contract"
     )]
     verify_only: Option<bool>,
 }
@@ -95,7 +115,7 @@ struct LoadTestArgs {
         short = 'c',
         long = "count",
         default_value = "10",
-        help = "If input_file is not specified, queries onchain_requests from db and triggers that many events"
+        help = "Number of requests from db to load test if input_file is not specified"
     )]
     count: Option<u64>,
 
@@ -198,8 +218,8 @@ async fn main() -> Result<()> {
                         ProofTypeArg::Risc0 => ProofType::Risc0,
                     },
                     None => {
-                        let mut rng = rand::thread_rng();
-                        let random_bool: bool = rng.gen();
+                        let mut rng = rand::rng();
+                        let random_bool: bool = rng.random();
                         if random_bool {
                             ProofType::Sp1
                         } else {
