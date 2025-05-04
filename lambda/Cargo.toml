@@ -1,0 +1,16 @@
+[package]
+name = "tdx-prover-lambda"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+aws_lambda_events = { version = "0.16.0", default-features = false, features = ["eventbridge"] }
+hex = { workspace = true }
+lambda_runtime = "0.13.0"
+openssl = { version = "0.10.72", features = ["vendored"] }
+rustls = { workspace = true }
+serde_json = { workspace = true }
+tdx-prover = { path = "../prover" }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

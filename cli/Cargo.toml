@@ -1,0 +1,23 @@
+[package]
+name = "tdx-prover-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow = { workspace = true }
+aws-config = "1.6.2"
+aws-sdk-eventbridge = "1.70.0"
+aws-sdk-lambda = "1.76.0"
+clap = { version = "4.0.16", features = ["derive"] }
+chrono = { workspace = true }
+hex = { workspace = true }
+lambda_runtime = "0.13.0"
+uuid = { workspace = true }
+rand = { workspace = true }
+rustls = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+tdx-prover = { path = "../prover" }
+tokio = { workspace = true }
