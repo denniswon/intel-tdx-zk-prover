@@ -1,20 +1,14 @@
-use std::fs::File;
-use std::io::{BufReader, BufRead};
-use std::path::{Path, PathBuf};
-use std::sync::Arc;
-use rand::Rng;
+use std::{path::PathBuf, sync::Arc};
 
+use rand::Rng;
 use anyhow::Result;
 use clap::{Args, Parser, Subcommand, ValueEnum};
-use tdx_prover::entity::{quote::{ProofType, TdxQuoteStatus}, zk::ProofSystem};
-use tdx_prover::state::request_state::RequestState;
-use tdx_prover::config::database::{Database, DatabaseTrait};
-use tdx_prover::repository::request_repository::{OnchainRequestRepositoryTrait, OnchainRequestId};
+use tdx_prover::{config::parameter, entity::{quote::{ProofType, TdxQuoteStatus}, zk::ProofSystem}};
 use hex::FromHex;
-use tdx_prover::config::parameter;
-
+use tokio::task;
 mod prove;
 mod aws;
+mod request;
 
 #[derive(Parser)]
 #[command(name = "TDXProver")]
@@ -169,6 +163,13 @@ struct LoadTestLambdaArgs {
     )]
     count: Option<u64>,
 
+    #[arg(
+        short = 'y',
+        long = "concurrency",
+        default_value = "1"
+    )]
+    concurrency: Option<usize>,
+
     #[arg(short = 'd', long = "delay-milliseconds", default_value = "1000")]
     delay_milliseconds: Option<u64>,
 
@@ -187,10 +188,20 @@ struct LoadTestLambdaArgs {
         default_value = "pending"
     )]
     quote_status: Option<TdxQuoteStatusArg>,
+
+    #[arg(
+        short = 'i',
+        long = "invoke",
+        default_value = "false"
+    )]
+    invoke: Option<bool>,
 }
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+    let _ = rustls::crypto::aws_lc_rs::default_provider().install_default();
+
     parameter::init();
 
     let cli = Cli::parse();
@@ -239,8 +250,8 @@ async fn main() -> Result<()> {
                 &args.input_file, count, delay_milliseconds, quote_status, verify_only);
             
             let onchain_request_ids = match &args.input_file {
-                Some(input_file) => read_lines(input_file).unwrap(),
-                None => fetch_onchain_request_ids(Some(quote_status), count).await,
+                Some(input_file) => request::read_lines(input_file).unwrap(),
+                None => request::fetch_onchain_request_ids(Some(quote_status), count).await,
             };
 
             for request_id in onchain_request_ids {
@@ -279,88 +290,104 @@ async fn main() -> Result<()> {
                 TdxQuoteStatusArg::Success => TdxQuoteStatus::Success,
             };
 
-            println!("Load testing tdx-prover lambda function (count: {}, delay_milliseconds: {}, quote_status: {})",
-                count, delay_milliseconds, quote_status);
+            let concurrency = args.concurrency.unwrap_or(1);
+            println!(r#"
+                Load testing tdx-prover lambda function
+                (count: {}, concurrency: {}, delay_milliseconds: {}, quote_status: {})
+            "#, count, concurrency, delay_milliseconds, quote_status);
             
-            let onchain_request_ids = fetch_onchain_request_ids(Some(quote_status), count).await;
+            let onchain_request_ids =
+                request::fetch_onchain_request_ids(Some(quote_status), count).await;
 
-            let (client, region) = aws::init_aws().await;
-            let client = Arc::new(client);
+            let (
+                lambda_client,
+                event_bridge_client,
+                region
+            ) = aws::init_aws().await;
             
-            for request_id in onchain_request_ids {
-                println!("Invoking tdx-prover lambda for request: {}", hex::encode(&request_id.request_id));
 
-                let proof_type = match args.proof_type {
-                    Some(proof_type) => match proof_type {
-                        ProofTypeArg::Sp1 => ProofType::Sp1,
-                        ProofTypeArg::Risc0 => ProofType::Risc0,
-                    },
-                    None => {
-                        let mut rng = rand::rng();
-                        let random_bool: bool = rng.random();
-                        if random_bool {
-                            ProofType::Sp1
-                        } else {
-                            ProofType::Risc0
-                        }
-                    }
-                };
+            let invoke = args.invoke.unwrap_or(false);
 
-                let request_id_hex = hex::encode(&request_id.request_id);
-                match aws::invoke_tdx_prover_lambda(
-                    &client,
-                    "tdx-prover-rust-lambda",
-                    &region,
-                    request_id.request_id,
-                    proof_type
-                ).await {
-                    Ok(response) => {
-                        println!("Lambda response status code for request {}: {}", request_id_hex, response.status_code());
-                        if std::env::var("DEBUG").is_ok() {
-                            println!("Lambda response for request {}: {:#?}", request_id_hex, response);
+            let mut handles = vec![];
+
+            for chunk in onchain_request_ids.chunks(concurrency) {
+                for request_id in chunk {
+                    let request_id_hex = hex::encode(&request_id.request_id);
+
+                    let proof_type = match args.proof_type {
+                        Some(proof_type) => match proof_type {
+                            ProofTypeArg::Sp1 => ProofType::Sp1,
+                            ProofTypeArg::Risc0 => ProofType::Risc0,
+                        },
+                        None => {
+                            let mut rng = rand::rng();
+                            let random_bool: bool = rng.random();
+                            if random_bool {
+                                ProofType::Sp1
+                            } else {
+                                ProofType::Risc0
+                            }
                         }
-                    },
-                    Err(e) => {
-                        println!("Failed to invoke tdx-prover lambda for request {}: {}", request_id_hex, e);
-                    }
+                    };
+
+                    let _lambda_client = Arc::clone(&lambda_client);
+                    let _event_bridge_client = Arc::clone(&event_bridge_client);
+                    let _region = region.clone();
+                    let _request_id = request_id.request_id.clone();
+
+                    let handle = task::spawn(async move {
+                        match invoke {
+                            true => {
+                                match aws::invoke_tdx_prover_lambda(
+                                    &_lambda_client,
+                                    "tdx-prover-rust-lambda",
+                                    &_region,
+                                    _request_id,
+                                    proof_type
+                                ).await {
+                                    Ok(response) => {
+                                        println!("Lambda response status code for request {}: {}", request_id_hex, response.status_code());
+                                        if std::env::var("DEBUG").is_ok() {
+                                            println!("Lambda response for request {}: {:#?}", request_id_hex, response);
+                                        }
+                                    },
+                                    Err(e) => {
+                                        println!("Failed to invoke tdx-prover lambda for request {}: {}", request_id_hex, e);
+                                    }
+                                }
+                            },
+                            false => {
+                                match aws::put_tdx_prover_event(
+                                    &_event_bridge_client,
+                                    _request_id,
+                                    proof_type
+                                ).await {
+                                    Ok(response) => {
+                                        println!("Event put for request {}", request_id_hex);
+                                        if std::env::var("DEBUG").is_ok() {
+                                            println!("Event put response for request {}: {:#?}", request_id_hex, response);
+                                        }
+                                    },
+                                    Err(e) => {
+                                        println!("Failed to put event for request {}: {}", request_id_hex, e);
+                                    }
+                                }
+                            }
+                        }
+                    });
+
+                    handles.push(handle);
+                }
+
+                for h in handles.drain(..) {
+                    let _ = h.await;
                 }
 
                 tokio::time::sleep(tokio::time::Duration::from_millis(delay_milliseconds)).await;
             }
+
             println!("Finished load testing tdx-prover lambda");
             Ok(())
         }
     }
-}
-
-fn read_lines<P>(filename: P) -> Result<Vec<OnchainRequestId>>
-where
-    P: AsRef<Path>,
-{
-    let file = File::open(filename)?;
-    let buf = BufReader::new(file);
-    let onchain_request_ids = buf.lines().filter_map(Result::ok)
-        .map(|line| {
-            Vec::from_hex(
-                line.strip_prefix("0x").unwrap_or(line.as_str())
-            ).unwrap_or_else(|_e| vec![])
-        }).collect::<Vec<Vec<u8>>>()
-        .into_iter().filter(|x| x.len() > 0).collect::<Vec<Vec<u8>>>()
-        .into_iter().map(|request_id| {
-            OnchainRequestId::new(request_id)
-        }).collect::<Vec<OnchainRequestId>>();
-    Ok(onchain_request_ids)
-}
-
-async fn fetch_onchain_request_ids(status: Option<TdxQuoteStatus>, count: u64) -> Vec<OnchainRequestId> {
-    let db_conn = Arc::new(
-        Database::init()
-            .await
-            .unwrap_or_else(|e| panic!("Database error: {}", e)),
-    );
-    let request_state = RequestState::new(&db_conn);
-
-    request_state.request_repo
-        .find_request_ids_by_status(status, Some(count as i64))
-        .await    
 }
