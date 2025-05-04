@@ -116,7 +116,7 @@ class TdxProver(Stack):
             function_name=f"{APP_SHORTNAME}-rust-lambda",
             runtime=_lambda.Runtime.PROVIDED_AL2023,
             handler="bootstrap",
-            code=_lambda.Code.from_asset("../target/lambda/lambda/bootstrap.zip"),
+            code=_lambda.Code.from_asset("../target/lambda/tdx-prover-lambda/bootstrap.zip"),
             environment={
                 "DATABASE_URL": self.service_secrets.secret_value_from_json("DATABASE_URL").unsafe_unwrap(),
                 "RUST_BACKTRACE": "1",  # Enable backtraces for better debugging

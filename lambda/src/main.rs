@@ -4,6 +4,8 @@ mod function;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
+    let _ = rustls::crypto::ring::default_provider().install_default();
+
     tracing_subscriber::fmt().json()
         .with_max_level(tracing::Level::INFO)
         // this needs to be set to remove duplicated information in the log.
