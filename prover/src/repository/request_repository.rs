@@ -6,7 +6,7 @@ use sqlx::{types::Uuid, FromRow};
 use crate::error::db_error::DbError;
 use std::sync::Arc;
 
-#[derive(Debug, FromRow)]
+#[derive(Debug, FromRow, Clone)]
 pub struct OnchainRequestId {
     pub request_id: Vec<u8>,
 }

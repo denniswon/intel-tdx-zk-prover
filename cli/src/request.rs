@@ -28,7 +28,7 @@ where
     Ok(onchain_request_ids)
 }
 
-pub(crate) async fn fetch_onchain_request_ids(status: Option<TdxQuoteStatus>, count: u64) -> Vec<OnchainRequestId> {
+pub(crate) async fn fetch_onchain_request_ids(status: Option<TdxQuoteStatus>, count: usize) -> Vec<OnchainRequestId> {
     let db_conn = Arc::new(
         Database::init()
             .await
@@ -38,5 +38,5 @@ pub(crate) async fn fetch_onchain_request_ids(status: Option<TdxQuoteStatus>, co
 
     request_state.request_repo
         .find_request_ids_by_status(status, Some(count as i64))
-        .await    
+        .await
 }
