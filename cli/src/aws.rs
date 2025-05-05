@@ -1,11 +1,11 @@
 use aws_config::{meta::region::RegionProviderChain, BehaviorVersion, Region};
 use aws_sdk_lambda::{
-    operation::invoke::InvokeOutput,
+    operation::invoke::{InvokeError, InvokeOutput},
     types::InvocationType,
     Client as LambdaClient
 };
 use aws_sdk_eventbridge::{
-    operation::put_events::PutEventsOutput,
+    operation::put_events::{PutEventsError, PutEventsOutput},
     types::PutEventsRequestEntry,
     Client as EventBridgeClient
 };
@@ -67,9 +67,17 @@ pub(crate) async fn invoke_tdx_prover_lambda(
         .invocation_type(InvocationType::Event)
         .payload(payload_bytes.into())
         .send()
-        .await?;
+        .await;
 
-    Ok(resp)
+    match resp {
+        Ok(output) => Ok(output),
+        Err(err) => match err.into_service_error() {
+            InvokeError::ResourceNotFoundException(value) => Err(Error::from(value)),
+            InvokeError::ServiceException(value) => Err(Error::from(value)),
+            InvokeError::TooManyRequestsException(value) => Err(Error::from(value)),
+            e => Err(Error::from(e)),
+        }
+    }
 }
 
 pub(crate) async fn put_tdx_prover_event(
@@ -95,7 +103,13 @@ pub(crate) async fn put_tdx_prover_event(
                 .build(),
         )
         .send()
-        .await?;
+        .await;
 
-    Ok(resp)
+    match resp {
+        Ok(output) => Ok(output),
+        Err(err) => match err.into_service_error() {
+            PutEventsError::InternalException(value) => Err(Error::from(value)),
+            e => Err(Error::from(e)),
+        }
+    }
 }

@@ -1,4 +1,4 @@
-use std::{path::PathBuf, sync::Arc};
+use std::{cmp::min, path::PathBuf, sync::Arc};
 
 use rand::Rng;
 use anyhow::Result;
@@ -115,7 +115,7 @@ struct LoadTestArgs {
         default_value = "10",
         help = "Number of requests from db to load test if input_file is not specified"
     )]
-    count: Option<u64>,
+    count: Option<usize>,
 
     #[arg(short = 'd', long = "delay-milliseconds", default_value = "1000")]
     delay_milliseconds: Option<u64>,
@@ -148,7 +148,6 @@ struct LoadTestArgs {
         short = 's',
         long = "quote-status",
         value_enum,
-        default_value = "pending"
     )]
     quote_status: Option<TdxQuoteStatusArg>,
 }
@@ -161,7 +160,7 @@ struct LoadTestLambdaArgs {
         default_value = "10",
         help = "Number of requests from db to load test if input_file is not specified"
     )]
-    count: Option<u64>,
+    count: Option<usize>,
 
     #[arg(
         short = 'y',
@@ -185,14 +184,13 @@ struct LoadTestLambdaArgs {
         short = 's',
         long = "quote-status",
         value_enum,
-        default_value = "pending"
     )]
     quote_status: Option<TdxQuoteStatusArg>,
 
     #[arg(
         short = 'i',
         long = "invoke",
-        default_value = "false"
+        default_value = "true"
     )]
     invoke: Option<bool>,
 }
@@ -239,19 +237,25 @@ async fn main() -> Result<()> {
 
             let verify_only = args.verify_only.unwrap_or(true);
 
-            let quote_status = match args.quote_status.unwrap_or(TdxQuoteStatusArg::Pending) {
-                TdxQuoteStatusArg::Pending => TdxQuoteStatus::Pending,
-                TdxQuoteStatusArg::Failure => TdxQuoteStatus::Failure,
-                TdxQuoteStatusArg::Success => TdxQuoteStatus::Success,
+            let quote_status = match args.quote_status {
+                Some(TdxQuoteStatusArg::Pending) => Some(TdxQuoteStatus::Pending),
+                Some(TdxQuoteStatusArg::Failure) => Some(TdxQuoteStatus::Failure),
+                Some(TdxQuoteStatusArg::Success) => Some(TdxQuoteStatus::Success),
+                None => None,
             };
 
-            println!("Load testing (input_file: {:?}, count: {}, delay_milliseconds: {}, quote_status: {}, verify_only: {})",
+            println!("Load testing (input_file: {:?}, count: {}, delay_milliseconds: {}, quote_status: {:?}, verify_only: {})",
                 &args.input_file, count, delay_milliseconds, quote_status, verify_only);
             
-            let onchain_request_ids = match &args.input_file {
+            let mut onchain_request_ids = match &args.input_file {
                 Some(input_file) => request::read_lines(input_file).unwrap(),
-                None => request::fetch_onchain_request_ids(Some(quote_status), count).await,
+                None => request::fetch_onchain_request_ids(quote_status, count).await,
             };
+
+            while onchain_request_ids.len() < count {
+                println!("Not enough onchain requests found {} < {}", onchain_request_ids.len(), count);
+                onchain_request_ids.extend_from_within(0..min(count - onchain_request_ids.len(), onchain_request_ids.len()));
+            }
 
             for request_id in onchain_request_ids {
                 println!("Proving onchain_request: {}", hex::encode(&request_id.request_id));
@@ -283,29 +287,36 @@ async fn main() -> Result<()> {
 
             let delay_milliseconds = args.delay_milliseconds.unwrap_or(1000);
 
-            let quote_status = match args.quote_status.unwrap_or(TdxQuoteStatusArg::Pending) {
-                TdxQuoteStatusArg::Pending => TdxQuoteStatus::Pending,
-                TdxQuoteStatusArg::Failure => TdxQuoteStatus::Failure,
-                TdxQuoteStatusArg::Success => TdxQuoteStatus::Success,
+            let quote_status = match args.quote_status {
+                Some(TdxQuoteStatusArg::Pending) => Some(TdxQuoteStatus::Pending),
+                Some(TdxQuoteStatusArg::Failure) => Some(TdxQuoteStatus::Failure),
+                Some(TdxQuoteStatusArg::Success) => Some(TdxQuoteStatus::Success),
+                None => None,
             };
 
             let concurrency = args.concurrency.unwrap_or(1);
             println!(r#"
                 Load testing tdx-prover lambda function
-                (count: {}, concurrency: {}, delay_milliseconds: {}, quote_status: {})
+                (count: {}, concurrency: {}, delay_milliseconds: {}, quote_status: {:?})
             "#, count, concurrency, delay_milliseconds, quote_status);
             
-            let onchain_request_ids =
-                request::fetch_onchain_request_ids(Some(quote_status), count).await;
+            let mut onchain_request_ids =
+                request::fetch_onchain_request_ids(quote_status, count).await;
+
+            println!("Found {} onchain requests", onchain_request_ids.len());
+
+            while onchain_request_ids.len() < count {
+                println!("Not enough onchain requests found {} < {}", onchain_request_ids.len(), count);
+                onchain_request_ids.extend_from_within(0..min(count - onchain_request_ids.len(), onchain_request_ids.len()));
+            }
 
             let (
                 lambda_client,
                 event_bridge_client,
                 region
             ) = aws::init_aws().await;
-            
 
-            let invoke = args.invoke.unwrap_or(false);
+            let invoke = args.invoke.unwrap_or(true);
 
             let mut handles = vec![];
 
