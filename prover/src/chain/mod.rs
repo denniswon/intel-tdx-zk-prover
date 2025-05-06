@@ -63,7 +63,7 @@ impl TxSender {
 
         let builder = provider.send_transaction(tx_request).await?
             .with_required_confirmations(1)
-            .with_timeout(Some(std::time::Duration::from_secs(60)));
+            .with_timeout(Some(std::time::Duration::from_secs(120)));
         let tx_hash = *builder.tx_hash();
         tracing::info!("TxSender: transaction hash: {}", tx_hash);
 
@@ -159,7 +159,7 @@ impl TxSender {
             let builder = match provider.send_transaction(tx).await {
                 Ok(tx) => {
                     tracing::info!("TxSender: Transaction hash: {}", *tx.tx_hash());
-                    Some(tx.with_timeout(Some(Duration::from_secs(60))))
+                    Some(tx.with_timeout(Some(Duration::from_secs(120))))
                 },
                 Err(e) => {
                     tracing::error!("TxSender: Failed to send transaction: {}", e);

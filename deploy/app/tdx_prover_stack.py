@@ -144,7 +144,7 @@ class TdxProver(Stack):
             log_group=log_group,
             memory_size=8192,  # Increased memory for better performance
             ephemeral_storage_size=cdk.Size.mebibytes(2048),  # Increased ephemeral storage for larger payloads
-            timeout=Duration.seconds(300),  # Increased timeout to 5 minutes for processing
+            timeout=Duration.seconds(900),  # Increased timeout to 15 minutes for processing
         )
 
         # Grant the Lambda function permission to read the secrets

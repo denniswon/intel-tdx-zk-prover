@@ -63,7 +63,7 @@ pub async fn prove(collateral_input: Vec<u8>, proof_system: Option<ProofSystem>)
     // Wait for proof complete with a timeout
     let proof = client.wait_proof(
         prover_request_id,
-        Some(Duration::from_secs(5 * 60))
+        Some(Duration::from_secs(15 * 60))
     ).await.unwrap();
 
     let journal = proof.public_values.as_slice();
