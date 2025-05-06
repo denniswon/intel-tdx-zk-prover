@@ -72,6 +72,13 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
 
     let verify_only = parameter::get("VERIFY_ONLY", Some("false")).to_lowercase() == "true";
 
+    let skip_onchain_verification = parameter::get("SKIP_ONCHAIN_VERIFICATION", Some("false")).to_lowercase() == "true";
+
+    if skip_onchain_verification {
+        tracing::info!("Skipping onchain verification. Early exit.");
+        return Ok(());
+    }
+
     let (verified, raw_verified_output, tx_hash, response) =
         zk::submit_proof(onchain_request, proof_type, proof.proof, Some(verify_only)).await
             .map_err(|e| {
