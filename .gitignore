@@ -49,3 +49,4 @@ fuzz/target/
 
 Claude.md
 **/.env
+**/.env.stagef

@@ -55,6 +55,15 @@ jobs:
         curl -fsSL https://cargo-lambda.info/install.sh | sh
         cargo lambda --help
 
+    # Cache Rust dependencies using rust-cache
+    - name: Cache Rust dependencies
+      uses: Swatinem/rust-cache@v2
+      with:
+        cache-targets: true
+        cache-all-crates: false
+        cache-on-failure: true
+        shared-key: ${{ github.ref == 'refs/heads/main' && 'main' || github.ref }}
+
     # Build Rust Lambda
     - name: Build Rust Lambda
       run: |
