@@ -4,7 +4,6 @@
 pub const DEFAULT_QUOTE_PATH: &str = "../../data/quote.hex";
 
 // Chain Defaults
-pub const AUTOMATA_DEFAULT_RPC_URL: &str = "https://1rpc.io/ata/testnet";
 pub const AUTOMATA_DEFAULT_DCAP_CONTRACT: &str = "0x95175096a9B74165BE0ac84260cc14Fc1c0EF5FF";
 
 // PCCS addresses

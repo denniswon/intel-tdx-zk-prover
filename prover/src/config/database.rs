@@ -23,7 +23,7 @@ pub trait DatabaseTrait {
 impl DatabaseTrait for Database {
     async fn init() -> Result<Self, Error> {
         parameter::init();
-        let url = parameter::get("DATABASE_URL");
+        let url = parameter::get("DATABASE_URL", None);
         let pool = PgPoolOptions::new().connect(&url).await?;
         info!("Connected to the database!");
         Ok(Self { pool })

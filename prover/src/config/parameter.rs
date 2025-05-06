@@ -6,7 +6,9 @@ pub fn init() {
     }
 }
 
-pub fn get(parameter: &str) -> String {
+pub fn get(parameter: &str, default_value: Option<&str>) -> String {
     std::env::var(parameter)
-        .unwrap_or_else(|_| panic!("{} is not defined in the environment.", parameter))
+        .unwrap_or_else(|_| default_value
+            .unwrap_or_else(|| panic!("{} is not defined in the environment.", parameter))
+            .to_string())
 }

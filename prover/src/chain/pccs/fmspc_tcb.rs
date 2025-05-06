@@ -2,7 +2,6 @@ use std::str::FromStr;
 
 use anyhow::Result;
 
-use crate::chain::constants::AUTOMATA_DEFAULT_RPC_URL;
 use crate::{config::parameter, chain::constants::AUTOMATA_FMSPC_TCB_DAO_ADDRESS};
 use crate::chain::utils::remove_prefix_if_found;
 
@@ -27,10 +26,14 @@ sol! {
 }
 
 pub async fn get_tcb_info(tcb_type: u8, fmspc: &str, version: u32) -> Result<Vec<u8>> {
-    let verify_only = parameter::get("VERIFY_ONLY") == "true";
+    let verify_only = parameter::get("VERIFY_ONLY", Some("false")) == "true";
     let rpc_url = match verify_only {
-        true => AUTOMATA_DEFAULT_RPC_URL.parse().expect("Failed to parse RPC URL"),
-        false => parameter::get("DEFAULT_RPC_URL").parse().expect("Failed to parse RPC URL")
+        true => parameter::get(
+            "AUTOMATA_DEFAULT_RPC_URL", Some("https://1rpc.io/ata/testnet")
+        ).parse().expect("Failed to parse RPC URL"),
+        false => parameter::get(
+            "DEFAULT_RPC_URL", Some("https://mainnet.base.org")
+        ).parse().expect("Failed to parse RPC URL")
     };
     let provider = ProviderBuilder::new().on_http(rpc_url);
 
@@ -38,7 +41,10 @@ pub async fn get_tcb_info(tcb_type: u8, fmspc: &str, version: u32) -> Result<Vec
         IFmspcTcbDao::new(
             match verify_only {
                 true => Address::from_str(AUTOMATA_FMSPC_TCB_DAO_ADDRESS).unwrap(),
-                false => parameter::get("FMSPC_TCB_DAO_ADDRESS").parse::<Address>().unwrap()
+                false => parameter::get(
+                    "FMSPC_TCB_DAO_ADDRESS",
+                    Some("0xd3A3f34E8615065704cCb5c304C0cEd41bB81483")
+                ).parse::<Address>().unwrap()
             },
             &provider
         );

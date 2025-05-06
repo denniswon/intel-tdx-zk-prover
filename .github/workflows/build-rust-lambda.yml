@@ -51,7 +51,7 @@ jobs:
     # Build Rust Lambda
     - name: Build Rust Lambda
       run: |
-        cargo lambda build --output-format zip
+        cargo lambda build --release --output-format zip
         pwd
         ls -ltrh ./target/lambda/tdx-prover-lambda/
 

@@ -120,6 +120,7 @@ class TdxProver(Stack):
             environment={
                 "DATABASE_URL": self.service_secrets.secret_value_from_json("DATABASE_URL").unsafe_unwrap(),
                 "RUST_BACKTRACE": "1",  # Enable backtraces for better debugging
+                "AUTOMATA_DEFAULT_RPC_URL": self.service_secrets.secret_value_from_json("AUTOMATA_DEFAULT_RPC_URL").unsafe_unwrap(),
                 "DEFAULT_RPC_URL": self.service_secrets.secret_value_from_json("DEFAULT_RPC_URL").unsafe_unwrap(),
                 "DEFAULT_DCAP_CONTRACT": "0xd338AF1E0Af0ca7A31752Ae2ac0e16B2cB64F78a" if deploy_env == "prod" else "0x9E4a45c40e06CE0653C33769138dF48802c1CF1e",
                 "ENCLAVE_ID_DAO_ADDRESS": "0xd74e880029cd3b6b434f16bea5f53a06989458ee",

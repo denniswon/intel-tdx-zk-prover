@@ -12,7 +12,7 @@ use crate::chain::pccs::pcs::get_certificate_by_id;
 use crate::chain::pccs::pcs::IPCSDao::CA;
 use crate::chain::TxSender;
 use crate::config::parameter;
-use crate::chain::constants::{AUTOMATA_DEFAULT_DCAP_CONTRACT, AUTOMATA_DEFAULT_RPC_URL};
+use crate::chain::constants::AUTOMATA_DEFAULT_DCAP_CONTRACT;
 use crate::chain::pccs::parser::get_pck_fmspc_and_issuer;
 use crate::entity::zk::{DcapProof, ProofResponse, ProofSystem, SubmitProofResponse, ZkvmProof};
 use crate::zk::sp1::prove as sp1_prove;
@@ -246,10 +246,13 @@ pub async fn submit_proof(
             tracing::info!("Verify only mode enabled");
 
             let tx_sender = TxSender::new(
-                AUTOMATA_DEFAULT_RPC_URL,
+                parameter::get(
+                    "AUTOMATA_DEFAULT_RPC_URL",
+                    Some("https://1rpc.io/ata/testnet")
+                ).as_str(),
                 AUTOMATA_DEFAULT_DCAP_CONTRACT,
                 None,
-                Some(parameter::get("PROVER_PRIVATE_KEY").as_str())
+                Some(parameter::get("PROVER_PRIVATE_KEY", None).as_str())
             ).expect("Failed to create txSender");
 
             // staticcall to the Halo prove request contract to verify proof
@@ -272,10 +275,16 @@ pub async fn submit_proof(
             tracing::info!("Submitting proof transaction...");
 
             let tx_sender = TxSender::new(
-                parameter::get("DEFAULT_RPC_URL").as_str(),
-                parameter::get("DEFAULT_DCAP_CONTRACT").as_str(),
+                parameter::get(
+                    "DEFAULT_RPC_URL",
+                    Some("https://mainnet.base.org")
+                ).as_str(),
+                parameter::get(
+                    "DEFAULT_DCAP_CONTRACT",
+                    Some("0x9E4a45c40e06CE0653C33769138dF48802c1CF1e")
+                ).as_str(),
                 Some(NamedChain::Base),
-                Some(parameter::get("PROVER_PRIVATE_KEY").as_str())
+                Some(parameter::get("PROVER_PRIVATE_KEY", None).as_str())
             ).expect("Failed to create txSender");
 
             let calldata = generate_prove_calldata(&request, proof_type, &program_output, &proof);
