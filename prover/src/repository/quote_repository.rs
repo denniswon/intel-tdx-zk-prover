@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 use crate::config::database::{Database, DatabaseTrait};
-use crate::entity::quote::{ProofType, TdxQuote, TdxQuoteStatus};
+use crate::{entity::quote::{ProofType, TdxQuote, TdxQuoteStatus}, get_conn};
 use async_trait::async_trait;
 use sqlx::types::Uuid;
 use crate::error::db_error::DbError;
@@ -60,7 +60,7 @@ impl QuoteRepositoryTrait for QuoteRepository {
             FROM tdx_quote WHERE id = $1"#,
             id,
         )
-        .fetch_one(self.db_conn.get_pool())
+        .fetch_one(get_conn!(self.db_conn.get_pool()))
         .await
         .map_err(|e| {
             tracing::info!("Failed to fetch quote: {}", e);
@@ -78,7 +78,7 @@ impl QuoteRepositoryTrait for QuoteRepository {
                 let quotes = sqlx::query_as::<_, TdxQuote>("SELECT * FROM tdx_quote WHERE onchain_request_id = ? AND status = ?")
                     .bind(onchain_request_id)
                     .bind(status)
-                    .fetch_all(self.db_conn.get_pool())
+                    .fetch_all(get_conn!(self.db_conn.get_pool()))
                     .await
                     .unwrap_or(vec![]);
                 return quotes;
@@ -86,7 +86,7 @@ impl QuoteRepositoryTrait for QuoteRepository {
             None => {
                 let quotes = sqlx::query_as::<_, TdxQuote>("SELECT * FROM tdx_quote WHERE onchain_request_id = ?")
                     .bind(onchain_request_id)
-                    .fetch_all(self.db_conn.get_pool())
+                    .fetch_all(get_conn!(self.db_conn.get_pool()))
                     .await
                     .unwrap_or(vec![]);
                 return quotes;
@@ -110,7 +110,7 @@ impl QuoteRepositoryTrait for QuoteRepository {
             FROM tdx_quote WHERE onchain_request_id = $1"#,
             onchain_request_id,
         )
-        .fetch_one(self.db_conn.get_pool())
+        .fetch_one(get_conn!(self.db_conn.get_pool()))
         .await
         .map_err(|e| {
             tracing::info!("Failed to fetch quote: {}", e);
@@ -137,7 +137,7 @@ impl QuoteRepositoryTrait for QuoteRepository {
                     txn_hash,
                     proof_type as ProofType,
                 )
-                .execute(self.db_conn.get_pool())
+                .execute(get_conn!(self.db_conn.get_pool()))
                 .await
                 .map_err(|e| {
                     tracing::info!("Failed to update quote status: {}", e);
@@ -151,7 +151,7 @@ impl QuoteRepositoryTrait for QuoteRepository {
                     status as TdxQuoteStatus,
                     proof_type as ProofType,
                 )
-                .execute(self.db_conn.get_pool())
+                .execute(get_conn!(self.db_conn.get_pool()))
                 .await
                 .map_err(|e| {
                     tracing::info!("Failed to update quote status: {}", e);
@@ -175,14 +175,14 @@ impl QuoteRepositoryTrait for QuoteRepository {
                         )
                         .bind(status)
                         .bind(count)
-                        .fetch_all(self.db_conn.get_pool())
+                        .fetch_all(get_conn!(self.db_conn.get_pool()))
                         .await
                         .unwrap_or(vec![]),
                     None => sqlx::query_as::<_, OnchainRequestId>(
                             r#"SELECT onchain_request_id FROM tdx_quote WHERE status = ?"#
                         )
                         .bind(status)
-                        .fetch_all(self.db_conn.get_pool())
+                        .fetch_all(get_conn!(self.db_conn.get_pool()))
                         .await
                         .unwrap_or(vec![]),
                 };
@@ -194,13 +194,13 @@ impl QuoteRepositoryTrait for QuoteRepository {
                             r#"SELECT onchain_request_id FROM tdx_quote LIMIT ? ORDER BY created_at DESC"#
                         )
                         .bind(count)
-                        .fetch_all(self.db_conn.get_pool())
+                        .fetch_all(get_conn!(self.db_conn.get_pool()))
                         .await
                         .unwrap_or(vec![]),
                     None => sqlx::query_as::<_, OnchainRequestId>(
                             r#"SELECT onchain_request_id FROM tdx_quote ORDER BY created_at DESC"#
                         )
-                        .fetch_all(self.db_conn.get_pool())
+                        .fetch_all(get_conn!(self.db_conn.get_pool()))
                         .await
                         .unwrap_or(vec![]),
                 };

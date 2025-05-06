@@ -1,6 +1,6 @@
 #[allow(dead_code)]
 use crate::config::database::{Database, DatabaseTrait};
-use crate::entity::{request::OnchainRequest, quote::TdxQuoteStatus};
+use crate::{entity::{quote::TdxQuoteStatus, request::OnchainRequest}, get_conn};
 use async_trait::async_trait;
 use sqlx::{types::Uuid, FromRow};
 use crate::error::db_error::DbError;
@@ -57,7 +57,7 @@ impl OnchainRequestRepositoryTrait for OnchainRequestRepository {
             updated_at as "updated_at: _"
             FROM onchain_request WHERE model_id = $1"#,
             model_id
-        ).fetch_all(self.db_conn.get_pool())
+        ).fetch_all(get_conn!(self.db_conn.get_pool()))
         .await
         .unwrap_or(vec![]);
         return onchain_requests;
@@ -81,7 +81,7 @@ impl OnchainRequestRepositoryTrait for OnchainRequestRepository {
             updated_at as "updated_at: _"
             FROM onchain_request WHERE id = $1"#,
             id
-        ).fetch_one(self.db_conn.get_pool())
+        ).fetch_one(get_conn!(self.db_conn.get_pool()))
         .await
         .map_err(|e| {
             tracing::info!("Failed to fetch onchain request: {}", e);
@@ -108,7 +108,7 @@ impl OnchainRequestRepositoryTrait for OnchainRequestRepository {
             updated_at as "updated_at: _"
             FROM onchain_request WHERE request_id = $1"#,
             request_id
-        ).fetch_one(self.db_conn.get_pool())
+        ).fetch_one(get_conn!(self.db_conn.get_pool()))
         .await
         .map_err(|e| {
             tracing::info!("Failed to fetch onchain request: {}", e);
@@ -133,7 +133,7 @@ impl OnchainRequestRepositoryTrait for OnchainRequestRepository {
                         status as TdxQuoteStatus,
                         count
                     )
-                        .fetch_all(self.db_conn.get_pool())
+                        .fetch_all(get_conn!(self.db_conn.get_pool()))
                         .await
                         .unwrap_or(vec![]),
                     None => sqlx::query_as!(
@@ -146,7 +146,7 @@ impl OnchainRequestRepositoryTrait for OnchainRequestRepository {
                         ORDER BY tdx_quote.created_at DESC"#,
                         status as TdxQuoteStatus
                     )
-                        .fetch_all(self.db_conn.get_pool())
+                        .fetch_all(get_conn!(self.db_conn.get_pool()))
                         .await
                         .unwrap_or(vec![]),
                 }
@@ -163,7 +163,7 @@ impl OnchainRequestRepositoryTrait for OnchainRequestRepository {
                         LIMIT $1"#,
                         count
                     )
-                        .fetch_all(self.db_conn.get_pool())
+                        .fetch_all(get_conn!(self.db_conn.get_pool()))
                         .await
                         .unwrap_or(vec![]),
                     None => sqlx::query_as!(
@@ -173,7 +173,7 @@ impl OnchainRequestRepositoryTrait for OnchainRequestRepository {
                         JOIN tdx_quote
                         ON onchain_request.id = tdx_quote.onchain_request_id
                         ORDER BY tdx_quote.created_at DESC"#)
-                        .fetch_all(self.db_conn.get_pool())
+                        .fetch_all(get_conn!(self.db_conn.get_pool()))
                         .await
                         .unwrap_or(vec![]),
                 }

@@ -1,35 +1,35 @@
 use async_trait::async_trait;
-use sqlx::{Error, Postgres, Pool};
-
-use sqlx::postgres::PgPoolOptions;
 use tracing::info;
 
 use crate::config::parameter;
+use crate::config::pool::{DbPool, Pool};
 
 #[derive(Clone)]
 pub struct Database {
-    pool: Pool<Postgres>,
+    pool: Pool,
 }
 
 #[async_trait]
 pub trait DatabaseTrait {
-    async fn init() -> Result<Self, Error>
+    async fn init() -> Result<Self, anyhow::Error>
         where
             Self: Sized;
-    fn get_pool(&self) -> &Pool<Postgres>;
+    fn get_pool(&self) -> &Pool;
 }
+
+const CONNECTION_COUNT: usize = 14;
 
 #[async_trait]
 impl DatabaseTrait for Database {
-    async fn init() -> Result<Self, Error> {
+    async fn init() -> Result<Self, anyhow::Error> {
         parameter::init();
-        let url = parameter::get("DATABASE_URL", None);
-        let pool = PgPoolOptions::new().connect(&url).await?;
+        let opts = parameter::get("DATABASE_URL", None).parse().unwrap();
+        let pool = DbPool::new(opts, CONNECTION_COUNT).unwrap();
         info!("Connected to the database!");
         Ok(Self { pool })
     }
 
-    fn get_pool(&self) -> &Pool<Postgres> {
+    fn get_pool(&self) -> &Pool {
         &self.pool
     }
 }

@@ -7,6 +7,13 @@ on:
         description: "Path to the built Lambda zip file"
         value: ${{ jobs.build.outputs.lambda_zip_path }}
 
+env:
+  # Disable incremental compilation for faster from-scratch builds
+  CARGO_INCREMENTAL: 0
+  CARGO_PROFILE_TEST_DEBUG: 0
+  CARGO_PROFILE_RELEASE_LTO: true
+  CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 1
+
 permissions:
   contents: read
 
@@ -51,7 +58,7 @@ jobs:
     # Build Rust Lambda
     - name: Build Rust Lambda
       run: |
-        cargo lambda build --release --output-format zip
+        cargo lambda build --release --output-format zip --locked
         pwd
         ls -ltrh ./target/lambda/tdx-prover-lambda/
 

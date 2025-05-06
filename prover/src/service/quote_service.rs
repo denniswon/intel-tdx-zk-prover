@@ -4,6 +4,7 @@ use crate::entity::quote::{ProofType, QuoteType, TdxQuote, TdxQuoteStatus};
 use crate::entity::zk::DcapProof;
 use crate::error::db_error::DbError;
 use crate::error::quote_error::QuoteError;
+use crate::get_conn;
 use crate::repository::quote_repository::{QuoteRepository, QuoteRepositoryTrait};
 use crate::zk::{prove, verify_proof};
 
@@ -78,7 +79,7 @@ impl QuoteService {
             payload.status as TdxQuoteStatus,
             String::from_utf8(payload.quote.to_vec()).unwrap(),
         )
-        .fetch_one(self.db_conn.get_pool())
+        .fetch_one(get_conn!(self.db_conn.get_pool()))
         .await?;
         Ok(quote)
     }

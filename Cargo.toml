@@ -22,3 +22,7 @@ tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter", "fmt", "json"] }
 tracing-test = "0.2.5"
 validator = { version = "0.20.0", features = ["derive"] }
+
+[profile.release]
+lto = true
+codegen-units = 1
