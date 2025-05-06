@@ -34,6 +34,20 @@ pub(crate) async fn handler(event: LambdaEvent<EventBridgeEvent>) -> Result<(), 
             .unwrap_or_else(|e| panic!("Database error: {}", e)),
     );
 
+    if let Some(verify_only) = event.payload.detail.get("verify_only") {
+        if verify_only.as_bool().unwrap() {
+            tracing::info!("Verify only mode enabled from payload");
+            std::env::set_var("VERIFY_ONLY", "true");
+        }
+    }
+
+    if let Some(skip_proof_submit) = event.payload.detail.get("skip_proof_submit") {
+        if skip_proof_submit.as_bool().unwrap() {
+            tracing::info!("Skip proof submit enabled from payload");
+            std::env::set_var("SKIP_ONCHAIN_VERIFICATION", "true");
+        }
+    }
+
     let quote_state = QuoteState::new(&db_conn);
     let request_state = RequestState::new(&db_conn);
 

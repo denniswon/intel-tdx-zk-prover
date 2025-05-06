@@ -13,7 +13,8 @@ pub(crate) async fn handler(
     request_id: Vec<u8>,
     proof_type: ProofType,
     proof_system: ProofSystem,
-    verify_only: bool
+    verify_only: bool,
+    skip_proof_submit: bool
 ) -> Result<(), Error> {
     let request_id_hex = hex::encode(&request_id);
 
@@ -57,6 +58,11 @@ pub(crate) async fn handler(
             QuoteError::VerifyProof
         })?;
         println!("Successfully verified proof.");
+    }
+
+    if skip_proof_submit {
+        println!("Skipping proof submission. Early exit.");
+        return Ok(());
     }
 
     let (verified, raw_verified_output, tx_hash, response) =

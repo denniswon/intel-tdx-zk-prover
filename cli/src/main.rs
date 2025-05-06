@@ -102,6 +102,14 @@ struct ProveArgs {
         help = "If true, make static call to automata testnet contract"
     )]
     verify_only: Option<bool>,
+
+    #[arg(
+        short = 'k',
+        long = "skip-proof-submit",
+        default_value = "false",
+        help = "If true, skip submitting proof on mainnet"
+    )]
+    skip_proof_submit: Option<bool>,
 }
 
 #[derive(Args, Debug)]
@@ -139,10 +147,18 @@ struct LoadTestArgs {
     #[arg(
         short = 'v',
         long = "verify-only",
-        default_value = "true",
+        default_value = "false",
         help = "If true, skip submitting proof on mainnet"
     )]
     verify_only: Option<bool>,
+
+    #[arg(
+        short = 'k',
+        long = "skip-proof-submit",
+        default_value = "true",
+        help = "If true, skip submitting proof on mainnet"
+    )]
+    skip_proof_submit: Option<bool>,
 
     #[arg(
         short = 's',
@@ -193,6 +209,22 @@ struct LoadTestLambdaArgs {
         default_value = "true"
     )]
     invoke: Option<bool>,
+
+    #[arg(
+        short = 'k',
+        long = "skip-proof-submit",
+        default_value = "true",
+        help = "If true, skip submitting proof on mainnet"
+    )]
+    skip_proof_submit: Option<bool>,
+
+    #[arg(
+        short = 'v',
+        long = "verify-only",
+        default_value = "false",
+        help = "If true, make static call to automata testnet contract"
+    )]
+    verify_only: Option<bool>,
 }
 
 #[tokio::main]
@@ -219,11 +251,12 @@ async fn main() -> Result<()> {
                 ProofSystemArg::Plonk => ProofSystem::Plonk,
             };
             let verify_only = args.verify_only.unwrap_or(false);
+            let skip_proof_submit = args.skip_proof_submit.unwrap_or(false);
 
             println!("Proving request_id: {} with proof_type: {} and proof_system: {} (verify_only: {})",
                 hex::encode(&request_id), proof_type, proof_system, verify_only);
 
-            prove::handler(request_id, proof_type, proof_system, verify_only).await
+            prove::handler(request_id, proof_type, proof_system, verify_only, skip_proof_submit).await
         }
         Commands::LoadTest(args) => {
             let count = args.count.unwrap_or(10);
@@ -236,6 +269,7 @@ async fn main() -> Result<()> {
             };
 
             let verify_only = args.verify_only.unwrap_or(true);
+            let skip_proof_submit = args.skip_proof_submit.unwrap_or(true);
 
             let quote_status = match args.quote_status {
                 Some(TdxQuoteStatusArg::Pending) => Some(TdxQuoteStatus::Pending),
@@ -276,7 +310,7 @@ async fn main() -> Result<()> {
                     }
                 };
                 
-                let _ = prove::handler(request_id.request_id, proof_type, proof_system, verify_only).await;
+                let _ = prove::handler(request_id.request_id, proof_type, proof_system, verify_only, skip_proof_submit).await;
                 tokio::time::sleep(tokio::time::Duration::from_millis(delay_milliseconds)).await;
             }
             println!("Finished load testing");
@@ -317,6 +351,8 @@ async fn main() -> Result<()> {
             ) = aws::init_aws().await;
 
             let invoke = args.invoke.unwrap_or(true);
+            let skip_proof_submit = args.skip_proof_submit.unwrap_or(true);
+            let verify_only = args.verify_only.unwrap_or(false);
 
             let mut handles = vec![];
 
@@ -353,7 +389,9 @@ async fn main() -> Result<()> {
                                     "tdx-prover-rust-lambda",
                                     &_region,
                                     _request_id,
-                                    proof_type
+                                    proof_type,
+                                    verify_only,
+                                    skip_proof_submit
                                 ).await {
                                     Ok(response) => {
                                         println!("Lambda response status code for request {}: {}", request_id_hex, response.status_code());
@@ -370,7 +408,9 @@ async fn main() -> Result<()> {
                                 match aws::put_tdx_prover_event(
                                     &_event_bridge_client,
                                     _request_id,
-                                    proof_type
+                                    proof_type,
+                                    verify_only,
+                                    skip_proof_submit
                                 ).await {
                                     Ok(response) => {
                                         println!("Event put for request {}", request_id_hex);

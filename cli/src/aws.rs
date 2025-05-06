@@ -35,7 +35,9 @@ pub(crate) async fn invoke_tdx_prover_lambda(
     function_name: &str,
     region: &Region,
     request_id: Vec<u8>,
-    proof_type: ProofType
+    proof_type: ProofType,
+    verify_only: bool,
+    skip_proof_submit: bool,
 ) -> Result<InvokeOutput, Error> {
     println!("Invoking tdx-prover lambda for request: {}", hex::encode(&request_id));
 
@@ -50,8 +52,10 @@ pub(crate) async fn invoke_tdx_prover_lambda(
         "region": region.as_ref(),
         "resources": [],
         "detail": {
-        "request_id": hex::encode(&request_id),
-        "proof_type": proof_type
+            "request_id": hex::encode(&request_id),
+            "proof_type": proof_type,
+            "verify_only": verify_only,
+            "skip_proof_submit": skip_proof_submit
         }
     });
 
@@ -83,13 +87,17 @@ pub(crate) async fn invoke_tdx_prover_lambda(
 pub(crate) async fn put_tdx_prover_event(
     client: &Arc<EventBridgeClient>,
     request_id: Vec<u8>,
-    proof_type: ProofType
+    proof_type: ProofType,
+    verify_only: bool,
+    skip_proof_submit: bool,
 ) -> Result<PutEventsOutput, Error> {
     println!("Putting event to tdx-prover event bus for request: {}", hex::encode(&request_id));
 
     let detail = serde_json::json!({
         "request_id": hex::encode(&request_id),
-        "proof_type": proof_type
+        "proof_type": proof_type,
+        "verify_only": verify_only,
+        "skip_proof_submit": skip_proof_submit
     });
 
     let resp = client
