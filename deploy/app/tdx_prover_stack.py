@@ -128,6 +128,7 @@ class TdxProver(Stack):
                 "PCS_DAO_ADDRESS": "0xb270cd8550da117e3accec36a90c4b0b48dad342",
                 "PCK_DAO_ADDRESS": "0xa4615c2a260413878241ff7605ad9577feb356a5",
                 "VERIFY_ONLY": "false",
+                "SKIP_ONCHAIN_VERIFICATION": "false",
                 "SP1_PROVER": "network",
                 "NETWORK_PRIVATE_KEY": self.service_secrets.secret_value_from_json("NETWORK_PRIVATE_KEY").unsafe_unwrap(),
                 "PROVER_PRIVATE_KEY": self.service_secrets.secret_value_from_json("PROVER_PRIVATE_KEY").unsafe_unwrap(),
